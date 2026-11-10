@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "idioma": "auto",
+  "zonaHoraria": "",
+  "commits": {
+    "_comentario": "credito: permitir | prohibir el crédito de Claude en los mensajes de commit. firma: línea final exigida cuando se prohíbe (p. ej. «Authored By: tu-dominio.com»); vacía = sin firma.",
+    "credito": "permitir",
+    "firma": ""
+  },
+  "listaBlanca": {
+    "_comentario": "Qué archivos obligan a pasar por el arnés (dinero · cuentas · base de datos · producción). Patrones = expresiones regulares sobre la ruta relativa en minúsculas. agregar SUMA patrones a una categoría (nueva o de fábrica); categorias REEMPLAZA los de fábrica de esa categoría; excluirRutas/excluirExtensiones se suman a los de fábrica.",
+    "excluirRutas": [],
+    "excluirExtensiones": [],
+    "categorias": {},
+    "agregar": {}
+  },
+  "arnes": {
+    "_comentario": "Carpetas extra que el sello de integridad debe vigilar: [carpeta, patrón, recursivo].",
+    "extra": []
+  },
+  "reglas": { "inyectar": true },
+  "statusline": { "estadoClaude": false, "guardarLimites": false },
+  "datos": {
+    "_comentario": "runs: carpeta de las corridas de seguridad (capa 3); vacía = UAEH_HOME/runs.",
+    "runs": "",
+    "retencion": { "completasDias": 30, "borrarDias": 365, "mantenerUltimas": 3, "avisoGB": 5 }
+  },
+  "wsl": {
+    "_comentario": "Windows: distro de WSL2 donde corren las piezas de Linux y usuario (nunca root).",
+    "distro": "Ubuntu-24.04",
+    "usuario": ""
+  },
+  "codex": {
+    "_comentario": "Codex (OpenAI) como auditor independiente: OPCIONAL y apagado. Habilitarlo manda una copia limpia del repo a OpenAI. Se habilita con «instalar.cjs puertas codex --consiento --aplicar», que deja la fecha en consentimiento. timeoutDiffMin / timeoutCompletaMin: tope en minutos de una corrida (revisión de un diff / auditoría completa) cuando no se pasa --timeout-min.",
+    "habilitado": false,
+    "consentimiento": "",
+    "modelos": {
+      "profundo": { "modelo": "gpt-6-astra", "esfuerzo": "high" },
+      "equilibrado": { "modelo": "gpt-6-sol", "esfuerzo": "medium" },
+      "rapido": { "modelo": "gpt-6-luna", "esfuerzo": "medium" }
+    },
+    "timeoutDiffMin": 10,
+    "timeoutCompletaMin": 40
+  },
+  "visual": { "catalogo": "" },
+  "preflight": { "jurisdiccion": "" }
+}

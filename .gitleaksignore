@@ -1,0 +1,26 @@
+# Hallazgos de gitleaks revisados a mano y aceptados, uno por huella (nunca por carpeta).
+#
+# Los seis son ejemplos de la documentación y de los patrones de un escáner de secretos de terceros
+# (vendor/cyber-neo, MIT): cadenas de juguete obvias en ejemplos de código «inseguro», la llave de ejemplo
+# de la documentación de AWS y encabezados de llave privada dentro de una tabla y de una expresión
+# regular. Ninguno es una credencial. (Los valores no se citan aquí: gitleaks también lee este archivo.)
+#
+# Por qué es seguro eximirlos así:
+#   - la huella fija archivo, regla y línea: si el texto se mueve o aparece otro, gitleaks vuelve a avisar;
+#   - tools/verificar-publicacion.cjs (comprobación «terceros») exige que cada archivo del vendor sea
+#     idéntico a la huella sha256 de su UPSTREAM.json: cambiar uno de estos archivos ya hace fallar la CI.
+#
+# Modo carpeta (gitleaks dir .): ruta:regla:línea
+plugins/uaeh-harness/vendor/cyber-neo/references/crypto-patterns.md:generic-api-key:223
+plugins/uaeh-harness/vendor/cyber-neo/references/iac-docker.md:generic-api-key:111
+plugins/uaeh-harness/vendor/cyber-neo/references/iac-docker.md:generic-api-key:686
+plugins/uaeh-harness/vendor/cyber-neo/references/lang-python.md:generic-api-key:867
+plugins/uaeh-harness/vendor/cyber-neo/references/secrets-patterns.md:private-key:126
+plugins/uaeh-harness/vendor/cyber-neo/scripts/scan_secrets.py:private-key:143
+# Modo historial (gitleaks git .): commit:ruta:regla:línea (el commit que trajo el vendor)
+31c72e6c886a1b63d16ddc668b9082d678327d54:plugins/uaeh-harness/vendor/cyber-neo/references/crypto-patterns.md:generic-api-key:223
+31c72e6c886a1b63d16ddc668b9082d678327d54:plugins/uaeh-harness/vendor/cyber-neo/references/iac-docker.md:generic-api-key:111
+31c72e6c886a1b63d16ddc668b9082d678327d54:plugins/uaeh-harness/vendor/cyber-neo/references/iac-docker.md:generic-api-key:686
+31c72e6c886a1b63d16ddc668b9082d678327d54:plugins/uaeh-harness/vendor/cyber-neo/references/lang-python.md:generic-api-key:867
+31c72e6c886a1b63d16ddc668b9082d678327d54:plugins/uaeh-harness/vendor/cyber-neo/references/secrets-patterns.md:private-key:126
+31c72e6c886a1b63d16ddc668b9082d678327d54:plugins/uaeh-harness/vendor/cyber-neo/scripts/scan_secrets.py:private-key:143

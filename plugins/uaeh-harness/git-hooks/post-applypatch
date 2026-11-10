@@ -1,0 +1,25 @@
+#!/bin/sh
+# Guarda global UAEH de git (core.hooksPath -> la copia estable del plugin uaeh-harness), hook "post-applypatch".
+# Solo ENCADENA el hook local del repo (mismos argumentos y misma entrada estandar; sin node).
+# Razones y detalle: hooks/guardia-git.js (hermano de esta carpeta; encabezado, CICLO 5) y hooks/guardia-commit.cjs.
+g="$GIT_DIR"
+if [ -z "$g" ]; then
+  if [ -d .git ]; then g=.git
+  elif [ -f .git ]; then read -r g < .git; g="${g#gitdir: }"
+  elif [ -f HEAD ] && [ -d objects ] && [ -d refs ]; then g=.
+  fi
+fi
+if [ -n "$g" ]; then
+  c="$g"
+  if [ -f "$g/commondir" ]; then
+    read -r cdir < "$g/commondir"
+    case "$cdir" in /*|?:*) c="$cdir" ;; *) c="$g/$cdir" ;; esac
+  fi
+else
+  c="$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)"
+fi
+l="$c/hooks/post-applypatch"
+if [ -f "$l" ] && [ -x "$l" ] && ! [ "$l" -ef "$0" ]; then
+  exec "$l" "$@"
+fi
+exit 0

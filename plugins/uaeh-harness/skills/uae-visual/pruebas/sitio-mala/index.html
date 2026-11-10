@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sitio de juguete</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 0; padding: 16px; background: #ffffff; }
+  h1 { color: #1a1a1a; font-family: Arial, sans-serif; }
+  /* Falla sembrada: contraste ~2.3:1 */
+  p { color: #aaaaaa; }
+  /* Falla sembrada: desborda a 360 px */
+  .ancho { width: 600px; background: #eeeeee; padding: 8px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Titulo de prueba</h1>
+  <p>Este parrafo tiene poco contraste con el fondo.</p>
+  <p>Otro parrafo de relleno para la captura.</p>
+  <div class="ancho">Bloque fijo de 600 px que desborda en pantallas chicas.</div>
+</main>
+</body>
+</html>

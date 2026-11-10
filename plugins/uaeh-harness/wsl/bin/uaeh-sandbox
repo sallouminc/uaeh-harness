@@ -1,0 +1,257 @@
+#!/bin/bash
+# uaeh-sandbox — caja de arena de la puerta de seguridad de uaeh-harness (capa 3).
+# Instalado en /opt/uaeh/bin (root, 0755) por instalar-bin.sh: ningún agente puede cambiar sus banderas. La carpeta
+# de corridas y el usuario salen de /opt/uaeh/uaeh.conf (root, 0644); nada se toma del entorno de quien lo llama.
+# Cumple el contrato de ejecución de security-audit: sin red (solo loopback aislado), entorno vacío salvo lista
+# blanca, proyecto en solo lectura, escritura solo en scratch, límites explícitos.
+#
+# Uso:
+#   uaeh-sandbox ejecutar --run <dir-run> --agente <id> [--imagen node] [--deps <volumen>] [--bd]
+#                         [--segundos N] [--env CLAVE=valor]... -- <comando> [args...]
+#   uaeh-sandbox preparar-deps --run <dir-run> [--gestor npm|pnpm] [--imagen node]   (solo el padre)
+# <dir-run> = <UAEH_BASE>/<repo>/run-N (ruta de Linux; en WSL también X:/… o X:\…, que se convierte con wslpath).
+#
+# Dentro del contenedor: /src (fuente, solo lectura) · /deps (dependencias preparadas, solo lectura)
+# /work y /tmp (tmpfs, se pierden al salir) · /scratch (lo único que persiste: <run>/agents/<id>/scratch)
+# /uaeh/armar.sh arma /work/app = dependencias + fuente vigente.  Con --bd: postgres en 127.0.0.1:5432.
+set -euo pipefail
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+umask 022
+
+IMAGENES=/opt/uaeh/imagenes.json
+AYUDA=/opt/uaeh/contenedor
+MAX_SEG=900
+SCRATCH_MAX_MB=1024
+DOCKER=/usr/bin/docker
+
+err(){ echo "uaeh-sandbox: ERROR: $*" >&2; exit 64; }
+
+# >>> bloque común «validar» (idéntico en instalar.sh, instalar-bin.sh, bin/uaeh-sandbox y bin/uaeh-validar;
+#     tests/harness/wsl.test.cjs exige que sea el mismo byte a byte; uaeh-promover repite las reglas en Python)
+usuario_valido(){  # $1 → 0 si es un usuario aceptable; si no, 1 con el motivo en MOTIVO
+  MOTIVO=""
+  if [[ ! "${1-}" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]]; then MOTIVO="usuario «${1-}» no válido (minúsculas, cifras, _ o -)"; return 1; fi
+  if [ "$1" = root ]; then MOTIVO="el usuario no puede ser root"; return 1; fi
+  return 0
+}
+base_valida(){  # $1 carpeta de corridas, $2 usuario → 0 si cumple; si no, 1 con el motivo en MOTIVO
+  local b="${1-}" u="${2-}" c n=0 primera="" segunda=""
+  MOTIVO=""
+  if [[ ! "$b" =~ ^/[A-Za-z0-9._/-]+$ ]]; then MOTIVO="«$b» debe ser una ruta absoluta de Linux con solo letras sin acento, cifras, . _ - y /"; return 1; fi
+  if [[ "$b" == *//* || "$b" == */ ]]; then MOTIVO="«$b» no puede llevar «//» ni terminar en «/»"; return 1; fi
+  local IFS=/
+  for c in ${b#/}; do
+    n=$((n + 1))
+    if [ "$c" = . ] || [ "$c" = .. ]; then MOTIVO="«$b» no puede llevar componentes «.» ni «..»"; return 1; fi
+    if [ "$n" = 1 ]; then primera=$c; fi
+    if [ "$n" = 2 ]; then segunda=$c; fi
+  done
+  if [ "$n" -lt 3 ]; then MOTIVO="«$b» es demasiado amplia: hacen falta 3 niveles o más (p. ej. /home/<usuario>/runs o /mnt/c/<carpeta>/runs)"; return 1; fi
+  case "$primera" in
+    mnt|srv) ;;
+    home) if [ "$segunda" != "$u" ]; then MOTIVO="bajo /home solo vale la carpeta del propio usuario (/home/$u/…)"; return 1; fi ;;
+    *) MOTIVO="«$b» debe colgar de /mnt, /home/<usuario> o /srv"; return 1 ;;
+  esac
+  return 0
+}
+resolver_usuario(){  # UAEH_USER > SUDO_USER (si no es root) > el usuario con uid 1000
+  if [ -n "${UAEH_USER-}" ]; then printf '%s' "$UAEH_USER"
+  elif [ -n "${SUDO_USER-}" ] && [ "$SUDO_USER" != root ]; then printf '%s' "$SUDO_USER"
+  else { getent passwd 1000 2>/dev/null || true; } | cut -d: -f1; fi
+}
+# <<< bloque común «validar»
+
+# >>> bloque común «conf» (idéntico en bin/uaeh-sandbox y bin/uaeh-validar; lo exige tests/harness/wsl.test.cjs)
+CONF=/opt/uaeh/uaeh.conf
+conf_segura(){  # $1 → existe, no es enlace, es de root y ni el grupo ni otros pueden escribirlo
+  local s
+  { [ -f "$1" ] && [ ! -L "$1" ]; } || err "falta $1 (lo escribe wsl/instalar-bin.sh del plugin, como root)"
+  s=$(stat -c '%u %a' -- "$1" 2>/dev/null) || err "no se pudo leer $1"
+  [[ "$s" =~ ^0\ ([0-7]{3,4})$ ]] || err "$1 debe ser de root"
+  (( (8#${BASH_REMATCH[1]} & 8#022) == 0 )) || err "$1 no debe ser escribible por el grupo ni por otros"
+}
+leer_conf(){  # $1 → BASE y USUARIO (solo claves conocidas; cada valor se revalida con el bloque «validar»)
+  local linea
+  BASE=""; USUARIO=""
+  [ -f "$1" ] || err "falta $1"
+  while IFS= read -r linea || [ -n "$linea" ]; do
+    case "$linea" in ''|'#'*) continue ;; esac
+    if [[ "$linea" =~ ^UAEH_BASE=(.*)$ ]]; then BASE=${BASH_REMATCH[1]}
+    elif [[ "$linea" =~ ^UAEH_USER=(.*)$ ]]; then USUARIO=${BASH_REMATCH[1]}
+    else err "línea desconocida en $1"; fi
+  done < "$1"
+  usuario_valido "$USUARIO" || err "UAEH_USER en $1: $MOTIVO"
+  base_valida "$BASE" "$USUARIO" || err "UAEH_BASE en $1: $MOTIVO"
+}
+ids_usuario(){  # USUARIO (de uaeh.conf) → UID_U y GID_U, nunca 0: los contenedores corren con la identidad de quien crea
+                # las carpetas del run (en WSL suele ser 1000; en otro Linux, no: un uid fijo deja /scratch sin escritura)
+  UID_U=$(id -u -- "$USUARIO" 2>/dev/null) || err "el usuario $USUARIO de $CONF no existe en este Linux"
+  GID_U=$(id -g -- "$USUARIO" 2>/dev/null) || err "el usuario $USUARIO de $CONF no existe en este Linux"
+  { [[ "$UID_U" =~ ^[1-9][0-9]{0,9}$ ]] && [[ "$GID_U" =~ ^[1-9][0-9]{0,9}$ ]]; } \
+    || err "uid/gid de $USUARIO no válidos ($UID_U:$GID_U): los contenedores nunca corren como root"
+}
+normaliza_run(){  # $1 → <BASE>/<repo>/run-N como ruta real exacta (sin enlaces); BASE se compara LITERAL, nunca como regex
+  local p="$1" r resto nombre
+  if [[ "$p" =~ ^[A-Za-z]:[\\/] ]]; then
+    [ -x /usr/bin/wslpath ] || err "ruta de Windows fuera de WSL (usar la ruta de Linux): $p"
+    p=$(/usr/bin/wslpath -u "$p" 2>/dev/null) || err "wslpath no convirtió la ruta: $1"
+  fi
+  p="${p%/}"
+  [[ "$p" == "$BASE"/* ]] || err "run fuera de $BASE/<repo>/run-N: $p"
+  resto=${p#"$BASE"/}
+  [[ "$resto" =~ ^[A-Za-z0-9._-]{1,80}/run-[0-9]{1,6}$ ]] || err "run fuera de $BASE/<repo>/run-N: $p"
+  nombre=${resto%%/*}
+  { [ "$nombre" != . ] && [ "$nombre" != .. ]; } || err "ruta con . o ..: $p"
+  r=$(realpath -e -- "$p" 2>/dev/null) || err "no existe: $p"
+  [ "$r" = "$p" ] || err "la ruta pasa por un enlace: $p -> $r"
+  printf '%s' "$p"
+}
+# <<< bloque común «conf»
+
+imagen_de(){  # clave de la lista blanca -> nombre@sha256:digest
+  [[ "$1" =~ ^[a-z0-9-]{1,32}$ ]] || err "clave de imagen inválida: $1"
+  [ -f "$IMAGENES" ] || err "falta $IMAGENES (lo escribe wsl/instalar.sh; con UAEH_SOLO_ESCANERES=1 no hay caja de arena)"
+  local v
+  v=$(python3 -I -c 'import json,sys; print(json.load(open(sys.argv[1])).get(sys.argv[2],""))' "$IMAGENES" "$1") || err "no se pudo leer $IMAGENES"
+  [[ "$v" =~ ^[a-z0-9._/-]+@sha256:[0-9a-f]{64}$ ]] || err "imagen '$1' no está en la lista blanca ($IMAGENES)"
+  printf '%s' "$v"
+}
+
+dir_real(){  # $1 debe existir, ser directorio y no pasar por enlaces
+  local r; r=$(realpath -e -- "$1" 2>/dev/null) || err "no existe: $1"
+  { [ "$r" = "$1" ] && [ -d "$1" ] && [ ! -L "$1" ]; } || err "no es un directorio real: $1"
+}
+
+principal(){
+  [ $# -ge 1 ] || err "falta el modo (ejecutar | preparar-deps)"
+  MODO="$1"; shift
+  RUN=""; AGENTE=""; CLAVE_IMG=node; DEPS=""; BD=0; SEG=300; GESTOR=npm; ENVS=(); CMD=()
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --run) RUN="${2-}"; shift 2 ;;
+      --agente) AGENTE="${2-}"; shift 2 ;;
+      --imagen) CLAVE_IMG="${2-}"; shift 2 ;;
+      --deps) DEPS="${2-}"; shift 2 ;;
+      --bd) BD=1; shift ;;
+      --segundos) SEG="${2-}"; shift 2 ;;
+      --gestor) GESTOR="${2-}"; shift 2 ;;
+      --env)
+        kv="${2-}"; shift 2
+        [[ "$kv" =~ ^([A-Za-z_][A-Za-z0-9_]{0,63})=(.{0,4096})$ ]] || err "--env inválido (CLAVE=valor)"
+        case "${BASH_REMATCH[1]}" in HOME|TMPDIR|PATH|LD_PRELOAD|LD_LIBRARY_PATH|LD_AUDIT|DATABASE_URL) err "--env no puede fijar ${BASH_REMATCH[1]}";; esac
+        [ ${#ENVS[@]} -lt 60 ] || err "demasiadas --env"
+        ENVS+=(-e "$kv") ;;
+      --) shift; CMD=("$@"); break ;;
+      *) err "argumento desconocido: $1" ;;
+    esac
+  done
+  case "$MODO" in ejecutar|preparar-deps) ;; *) err "modo desconocido: $MODO (ejecutar | preparar-deps)" ;; esac
+  [ -n "$RUN" ] || err "falta --run"
+  conf_segura "$CONF"
+  leer_conf "$CONF"
+  ids_usuario
+  RUN=$(normaliza_run "$RUN") || exit 64
+  FUENTE="$RUN/fuente"; dir_real "$FUENTE"
+  IMG=$(imagen_de "$CLAVE_IMG") || exit 64
+  REPO=$(basename "$(dirname "$RUN")" | tr 'A-Z' 'a-z' | tr -c 'a-z0-9-\n' '-' | cut -c1-40)
+  SUF="$(date +%s)-$RANDOM"
+  COMUNES=(--cap-drop ALL --security-opt no-new-privileges --pids-limit 256 --ulimit nofile=1024:1024)
+  # Docker rechaza pedir más CPU de las que tiene la máquina (un runner de CI de repo privado tiene 2): tope = nproc.
+  NCPU=$(nproc 2>/dev/null || echo 1); [[ "$NCPU" =~ ^[1-9][0-9]{0,3}$ ]] || NCPU=1
+  CPU_PREP=$(( NCPU < 4 ? NCPU : 4 )); CPU_EJEC=$(( NCPU < 2 ? NCPU : 2 ))
+
+  case "$MODO" in
+  # -------------------------------------------------------------------------------------------------------------
+  preparar-deps)
+    # ÚNICA etapa con red: solo baja dependencias del lockfile, con --ignore-scripts (no corre código del
+    # proyecto). Resultado: volumen uaeh-deps-<repo>-<hash del lockfile> con /deps/app listo.
+    # pnpm carga .pnpmfile.cjs del repo aunque haya --ignore-scripts: por eso --ignore-pnpmfile.
+    case "$GESTOR" in
+      npm)  LOCK=package-lock.json; INST='npm ci --ignore-scripts --no-audit --no-fund' ;;
+      pnpm) LOCK=pnpm-lock.yaml;    INST='corepack pnpm install --frozen-lockfile --ignore-scripts --ignore-pnpmfile' ;;
+      *) err "--gestor debe ser npm o pnpm" ;;
+    esac
+    { [ -f "$FUENTE/$LOCK" ] && [ ! -L "$FUENTE/$LOCK" ]; } || err "no hay $LOCK en la fuente"
+    H=$(sha256sum "$FUENTE/$LOCK" | cut -c1-12)
+    VOL="uaeh-deps-$REPO-$H"
+    if "$DOCKER" volume inspect "$VOL" >/dev/null 2>&1; then echo "$VOL"; echo "uaeh-sandbox: volumen reusado" >&2; exit 0; fi
+    "$DOCKER" volume create --label uaeh=deps "$VOL" >/dev/null
+    echo "uaeh-sandbox: preparando $VOL ($GESTOR, con red, --ignore-scripts)" >&2
+    if ! timeout --kill-after=10 1200 "$DOCKER" run --rm --name "uaeh-prep-$SUF" "${COMUNES[@]}" \
+        --user 0:0 --read-only --memory 4g --memory-swap 4g --cpus "$CPU_PREP" \
+        --tmpfs /tmp:rw,exec,nosuid,nodev,size=2048m \
+        --mount "type=bind,src=$FUENTE,dst=/src,readonly" \
+        --mount "type=volume,src=$VOL,dst=/deps" \
+        -e HOME=/tmp/home -e npm_config_cache=/tmp/npm -e COREPACK_HOME=/tmp/corepack \
+        -e COREPACK_ENABLE_DOWNLOAD_PROMPT=0 -e CI=1 -w /deps \
+        "$IMG" sh -c "mkdir -p /deps/app /tmp/home && cp -a --no-preserve=ownership /src/. /deps/app/ && cd /deps/app && $INST" >&2; then
+      "$DOCKER" volume rm "$VOL" >/dev/null 2>&1 || true
+      err "falló la preparación de dependencias (¿necesita scripts de instalación? -> needs_validation)"
+    fi
+    echo "$VOL" ;;
+  # -------------------------------------------------------------------------------------------------------------
+  ejecutar)
+    [[ "$AGENTE" =~ ^[a-z0-9][a-z0-9_-]{0,63}$ ]] || err "--agente inválido (^[a-z0-9][a-z0-9_-]{0,63}$)"
+    case "$AGENTE" in con|prn|aux|nul|com[1-9]|lpt[1-9]) err "--agente no puede ser un nombre de dispositivo";; esac
+    { [[ "$SEG" =~ ^[0-9]{1,4}$ ]] && [ "$SEG" -ge 1 ] && [ "$SEG" -le "$MAX_SEG" ]; } || err "--segundos entre 1 y $MAX_SEG"
+    [ ${#CMD[@]} -ge 1 ] || err "falta el comando después de --"
+    for d in "$RUN/agents" "$RUN/agents/$AGENTE"; do
+      [ -e "$d" ] || mkdir "$d"; dir_real "$d"
+    done
+    SCRATCH="$RUN/agents/$AGENTE/scratch"; [ -e "$SCRATCH" ] || mkdir "$SCRATCH"; dir_real "$SCRATCH"
+    MONTAJES=(--mount "type=bind,src=$FUENTE,dst=/src,readonly"
+              --mount "type=bind,src=$SCRATCH,dst=/scratch"
+              --mount "type=bind,src=$AYUDA,dst=/uaeh,readonly")
+    if [ -n "$DEPS" ]; then
+      [[ "$DEPS" =~ ^uaeh-deps-[a-z0-9-]{1,80}$ ]] || err "--deps inválido"
+      "$DOCKER" volume inspect "$DEPS" >/dev/null 2>&1 || err "no existe el volumen $DEPS (correr preparar-deps)"
+      MONTAJES+=(--mount "type=volume,src=$DEPS,dst=/deps,readonly")
+    fi
+    NOMBRE="uaeh-$AGENTE-$SUF"; BDNOMBRE="uaeh-bd-$SUF"
+    RED=(--network none)
+    limpiar(){
+      "$DOCKER" rm -f "$NOMBRE" >/dev/null 2>&1 || true
+      if [ "$BD" = 1 ]; then "$DOCKER" rm -f "$BDNOMBRE" >/dev/null 2>&1 || true; fi
+      if [ -n "${VIGIA-}" ]; then kill "$VIGIA" 2>/dev/null || true; fi
+    }
+    trap limpiar EXIT INT TERM
+    if [ "$BD" = 1 ]; then
+      PG=$(imagen_de postgres) || exit 64
+      "$DOCKER" run -d --rm --name "$BDNOMBRE" --network none --read-only "${COMUNES[@]}" \
+        --user 70:70 --memory 1g --memory-swap 1g --cpus 1 \
+        --tmpfs /var/lib/postgresql/data:rw,uid=70,gid=70,size=512m \
+        --tmpfs /var/run/postgresql:rw,uid=70,gid=70,size=8m --tmpfs /tmp:rw,size=64m \
+        -e POSTGRES_USER=uaeh -e POSTGRES_PASSWORD=uaeh-ficticia -e POSTGRES_DB=uaeh "$PG" >/dev/null
+      for _ in $(seq 1 60); do
+        "$DOCKER" exec "$BDNOMBRE" pg_isready -q -h 127.0.0.1 -U uaeh 2>/dev/null && break; sleep 0.5
+      done
+      "$DOCKER" exec "$BDNOMBRE" pg_isready -q -h 127.0.0.1 -U uaeh || err "postgres no arrancó"
+      RED=(--network "container:$BDNOMBRE")
+      ENVS+=(-e "DATABASE_URL=postgresql://uaeh:uaeh-ficticia@127.0.0.1:5432/uaeh")
+    fi
+    # Vigía de disco: /scratch es lo único que escribe en el disco del anfitrión.
+    ( while sleep 2; do
+        mb=$(du -sm "$SCRATCH" 2>/dev/null | cut -f1 || echo 0)
+        if [ "${mb:-0}" -gt "$SCRATCH_MAX_MB" ]; then
+          echo "uaeh-sandbox: scratch pasó de $SCRATCH_MAX_MB MB, se detiene" >&2
+          "$DOCKER" kill "$NOMBRE" >/dev/null 2>&1; exit 0
+        fi
+      done ) & VIGIA=$!
+    echo "uaeh-sandbox: imagen=$IMG red=${RED[1]} agente=$AGENTE usuario=$UID_U:$GID_U límite=${SEG}s mem=3g cpus=$CPU_EJEC pids=256 scratch<=${SCRATCH_MAX_MB}MB cmd=${CMD[*]}" >&2
+    T0=$(date +%s); set +e
+    timeout --kill-after=10 $((SEG + 30)) "$DOCKER" run --rm --name "$NOMBRE" "${RED[@]}" --read-only "${COMUNES[@]}" \
+      --user "$UID_U:$GID_U" --memory 3g --memory-swap 3g --cpus "$CPU_EJEC" --ulimit fsize=268435456 \
+      --tmpfs "/tmp:rw,exec,nosuid,nodev,size=512m,uid=$UID_U,gid=$GID_U" \
+      --tmpfs "/work:rw,exec,nosuid,nodev,size=2048m,uid=$UID_U,gid=$GID_U" \
+      "${MONTAJES[@]}" \
+      -e HOME=/work/home -e TMPDIR=/tmp -e npm_config_cache=/work/.npm -e CI=1 "${ENVS[@]}" \
+      -w /work "$IMG" \
+      timeout --kill-after=5 "$SEG" sh -c 'mkdir -p "$HOME" && exec "$@"' sh "${CMD[@]}"
+    RC=$?; set -e
+    echo "uaeh-sandbox: fin código=$RC duración=$(( $(date +%s) - T0 ))s scratch=$(du -sm "$SCRATCH" | cut -f1)MB" >&2
+    exit "$RC" ;;
+  esac
+}
+
+# Cargado con «source» (pruebas del plugin) solo define funciones; ejecutado, corre principal.
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then principal "$@"; fi

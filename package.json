@@ -1,0 +1,22 @@
+{
+  "name": "uaeh-harness",
+  "version": "0.1.0",
+  "private": true,
+  "description": "UAEH — Universal Agentic Engineering Harness. Claude Code plugins: uaeh-kit (method + token-efficiency kit) and uaeh-harness (verification harness + gates).",
+  "license": "MIT",
+  "author": "Salloum Inc",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sallouminc/uaeh-harness"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node tools/correr-pruebas.cjs",
+    "lint": "node tools/lint-publicacion.cjs",
+    "verificar": "node tools/verificar-publicacion.cjs",
+    "presupuesto": "node tools/verificar-presupuesto.cjs",
+    "validar": "claude plugin validate --strict . && claude plugin validate --strict plugins/uaeh-kit && claude plugin validate --strict plugins/uaeh-harness"
+  }
+}

@@ -1,0 +1,175 @@
+# Integración continua de uaeh-harness. Solo lee el repositorio. Único secreto: UAEH_LINT_PRIVADO (la lista de
+# nombres propios del lint de publicación, que no vive en el repo); en un fork no existe y el lint corre con la pública.
+# Las acciones van fijadas por SHA (una etiqueta se puede mover); el comentario dice a qué versión corresponde.
+#   unitarias        pruebas herméticas en Windows y Linux con Node 20 y 24 (en CI una prueba omitida es fallo).
+#   publicacion      lista negra, verificación completa de publicación y presupuesto de contexto.
+#   validar-plugins  claude plugin validate --strict del marketplace y de los dos plugins.
+#   linux-integracion       capa 3 de verdad en el runner: instaladores de wsl/, autoprueba de la caja de arena,
+#                           validadores y la integración con escáneres reales (omitir = fallo).
+#   instaladores-contenedor los instaladores como root en un ubuntu:24.04 desechable (tools/probar-instaladores-contenedor.sh).
+#   secretos         gitleaks (el pin de wsl/herramientas.json, sha256 verificado) sobre el historial completo y el árbol,
+#                    con .gitleaks.toml y las excepciones por huella de .gitleaksignore.
+#   Todos bloquean. Los dos de la capa 3 dejaron continue-on-error en el Bloque G, tras 7 corridas verdes seguidas de
+#   linux-integracion y 6 de 7 de instaladores-contenedor (la roja fue una carrera de pipefail, corregida en 0.6.2 con
+#   una prueba que prohíbe el patrón).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  unitarias:
+    name: unitarias (${{ matrix.os }}, node ${{ matrix.node }})
+    runs-on: ${{ matrix.os }}
+    # Las suites de la guarda de git (≈1,200 casos con commits reales) tardan 8–12 min en Windows.
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-24.04]
+        node: [20, 24]
+    steps:
+      # Antes del checkout: en Windows git convierte los fines de línea por defecto, y las pruebas
+      # comparan contenido y buscan CRLF a propósito.
+      - name: Desactivar la conversión de fin de línea de git
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Pruebas
+        run: node tools/correr-pruebas.cjs
+        env:
+          UAEH_CI: '1'
+          UAEH_LINT_PRIVADO: ${{ secrets.UAEH_LINT_PRIVADO }}
+
+  publicacion:
+    name: publicacion
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          # Historial y tags completos: la comprobación de versión compara contra el último tag v*.
+          fetch-depth: 0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+      # En el repositorio propio la lista privada es obligatoria: sin el secreto, el lint pasaría sin buscar los
+      # nombres propios. En un fork, o en un PR que viene de un fork (GitHub no le entrega secretos), se omite.
+      - name: Lista privada presente (repositorio propio)
+        if: github.repository == 'sallouminc/uaeh-harness' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        run: |
+          test -n "$UAEH_LINT_PRIVADO" || { echo "::error::Falta el secreto UAEH_LINT_PRIVADO en este repositorio"; exit 1; }
+          node tools/lint-publicacion.cjs | grep -E 'lista privada: [1-9][0-9]* patrón' || { echo "::error::El lint no cargó la lista privada"; exit 1; }
+        env:
+          UAEH_LINT_PRIVADO: ${{ secrets.UAEH_LINT_PRIVADO }}
+      - name: Lista negra
+        run: node tools/lint-publicacion.cjs
+        env:
+          UAEH_LINT_PRIVADO: ${{ secrets.UAEH_LINT_PRIVADO }}
+      - name: Verificación completa de publicación
+        run: node tools/verificar-publicacion.cjs
+        env:
+          UAEH_LINT_PRIVADO: ${{ secrets.UAEH_LINT_PRIVADO }}
+      - name: Presupuesto de contexto
+        run: node tools/verificar-presupuesto.cjs
+
+  validar-plugins:
+    name: validar-plugins
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    # Bloqueante: `claude plugin validate` corre sin sesión iniciada (comprobado con un perfil vacío, CLI 2.1.316).
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+      # Sin versión a propósito: este trabajo comprueba que los plugins validan contra el Claude Code ACTUAL.
+      # No recibe secretos y el token del trabajo solo lee.
+      - name: Instalar Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+      - name: Validar el marketplace
+        run: claude plugin validate --strict .
+      - name: Validar uaeh-kit
+        run: claude plugin validate --strict plugins/uaeh-kit
+      - name: Validar uaeh-harness
+        run: claude plugin validate --strict plugins/uaeh-harness
+
+  linux-integracion:
+    name: linux-integracion
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+      # Usa el Docker del runner (UAEH_SKIP_DOCKER=1): escáneres, reglas e imágenes por digest, verificados contra los pines.
+      - name: Instalar el motor de Linux (instalar.sh)
+        run: sudo env UAEH_SKIP_DOCKER=1 UAEH_USER="$(id -un)" UAEH_TZ=UTC bash plugins/uaeh-harness/wsl/instalar.sh
+      - name: Instalar la caja de arena y uaeh.conf (instalar-bin.sh)
+        run: sudo env UAEH_BASE="$HOME/uaeh-runs" UAEH_USER="$(id -un)" bash plugins/uaeh-harness/wsl/instalar-bin.sh
+      # Salida 77 (omitida) también falla el paso: aquí la capa 3 tiene que estar completa.
+      - name: Autoprueba de la caja de arena instalada (probar-sandbox.sh)
+        run: bash /opt/uaeh/pruebas/probar-sandbox.sh
+      - name: Suites de los validadores instalados (uaeh-validar --pruebas)
+        run: /opt/uaeh/bin/uaeh-validar --pruebas
+      # Los instaló root: aquí se comprueba que el usuario de la capa 3 los puede correr (salida completa si fallan).
+      - name: Escáneres instalados, como el usuario
+        run: |
+          /usr/local/bin/gitleaks version
+          /usr/local/bin/osv-scanner --version
+          /usr/local/bin/semgrep --version
+      # El doctor contra una capa 3 instalada de verdad: wsl/estado.sh en Linux directo y el veredicto de la puerta.
+      - name: Doctor de la puerta de seguridad (doctor-puertas.cjs)
+        run: |
+          bash plugins/uaeh-harness/wsl/estado.sh
+          UAEH_RUNS_DIR="$HOME/uaeh-runs" node plugins/uaeh-harness/scripts/doctor-puertas.cjs --puerta seguridad
+      - name: Integración con escáneres reales y autopruebas
+        run: node tools/correr-pruebas.cjs --solo integracion
+        env:
+          UAEH_CI: '1'
+          UAEH_INTEGRACION: '1'
+
+  instaladores-contenedor:
+    name: instaladores-contenedor
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - name: Instaladores en un ubuntu:24.04 desechable
+        run: bash tools/probar-instaladores-contenedor.sh
+
+  secretos:
+    name: secretos
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          # gitleaks git recorre todos los commits: sin historial completo solo vería el último.
+          fetch-depth: 0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+      # Mismo pin, archivo y sha256 que instala la capa 3 (wsl/herramientas.json es la única fuente de versiones).
+      - name: Instalar gitleaks (pin con sha256 verificado)
+        run: |
+          set -euo pipefail
+          read -r VER ARCHIVO SHA < <(node -e "const g=require('./plugins/uaeh-harness/wsl/herramientas.json').gitleaks; console.log(g.version, g.archivo, g.sha256)")
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/$ARCHIVO" "https://github.com/gitleaks/gitleaks/releases/download/v$VER/$ARCHIVO"
+          echo "$SHA  $RUNNER_TEMP/$ARCHIVO" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/$ARCHIVO" -C "$RUNNER_TEMP" gitleaks
+          test "$("$RUNNER_TEMP/gitleaks" version)" = "$VER"
+      - name: Historial completo (gitleaks git)
+        run: |
+          "$RUNNER_TEMP/gitleaks" git --config .gitleaks.toml --redact --no-banner --exit-code 1 .
+      - name: Árbol de trabajo (gitleaks dir)
+        run: |
+          "$RUNNER_TEMP/gitleaks" dir --config .gitleaks.toml --redact --no-banner --exit-code 1 .

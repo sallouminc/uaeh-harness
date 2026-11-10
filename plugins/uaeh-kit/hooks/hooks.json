@@ -1,0 +1,35 @@
+{
+  "description": "uaeh-kit: hooks informativos. Nunca bloquean; cualquier fallo sale en silencio con código 0. SessionStart: inyecta la marca [uaeh-kit ctx v1], las reglas compactas (si el CLAUDE.md no trae ya el bloque UAEH) y tasks/context-map.md del proyecto; además avisa si algún CLAUDE.md pasa de 40,000 caracteres. UserPromptSubmit: avisa una vez por sesión al 80 % y al 90 % del tope de compactación. Forma exec (command + args): sin shell, sin problemas de comillas ni de Git Bash.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/inyectar-contexto.js"],
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/vigia-contexto.js", "inicio"],
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/vigia-contexto.js", "prompt"],
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

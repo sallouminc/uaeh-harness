@@ -1,0 +1,32 @@
+#!/bin/sh
+# Guarda global UAEH de git (core.hooksPath -> la copia estable del plugin uaeh-harness), hook "commit-msg".
+# Primero el hook LOCAL (puede quitar el credito y firmar); luego la revision global del mensaje FINAL y del autor.
+# Razones y detalle: hooks/guardia-git.js (hermano de esta carpeta; encabezado, CICLO 6) y hooks/guardia-commit.cjs.
+case "$0" in */*) d="${0%/*}" ;; *) d=. ;; esac
+if command -v node >/dev/null 2>&1; then n=node; else n="/c/Program Files/nodejs/node.exe"; fi
+if ! command -v "$n" >/dev/null 2>&1 && ! [ -x "$n" ]; then
+  echo "Guardia UAEH (git): no encuentro node -> commit negado (falla cerrado)." >&2
+  exit 1
+fi
+g="$GIT_DIR"
+if [ -z "$g" ]; then
+  if [ -d .git ]; then g=.git
+  elif [ -f .git ]; then read -r g < .git; g="${g#gitdir: }"
+  elif [ -f HEAD ] && [ -d objects ] && [ -d refs ]; then g=.
+  fi
+fi
+if [ -n "$g" ]; then
+  c="$g"
+  if [ -f "$g/commondir" ]; then
+    read -r cdir < "$g/commondir"
+    case "$cdir" in /*|?:*) c="$cdir" ;; *) c="$g/$cdir" ;; esac
+  fi
+else
+  c="$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)"
+fi
+l="$c/hooks/commit-msg"
+if [ -f "$l" ] && [ -x "$l" ] && ! [ "$l" -ef "$0" ]; then
+  "$l" "$@" || exit $?
+fi
+"$n" "$d/../hooks/guardia-commit.cjs" commit-msg "$1" || exit 1
+exit 0

@@ -1,0 +1,10 @@
+# Configuración de gitleaks para uaeh-harness.
+#
+# Extiende las reglas por defecto de gitleaks, sin eximir ninguna carpeta: ni plugins/, ni tools/, ni
+# tests/, ni la documentación. Las pruebas arman sus secretos de juguete por partes ('AKIA' + '…'), así
+# que no tienen forma de secreto dentro del archivo. Los ejemplos de llaves de un vendor de terceros se
+# aceptan uno por uno, por huella exacta, en .gitleaksignore (con el motivo).
+title = "uaeh-harness"
+
+[extend]
+useDefault = true

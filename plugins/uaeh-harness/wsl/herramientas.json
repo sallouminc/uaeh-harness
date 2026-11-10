@@ -1,0 +1,47 @@
+{
+  "esquema": 1,
+  "_nota": "Solo pines. Los lee instalar.sh (versiones, huellas, digests); lo instalado de verdad queda en /opt/uaeh/instalado.json. Regla para subir un pin: última versión estable publicada hace 14 días o más, huella tomada del archivo oficial de sumas del proyecto, y wsl/pruebas en verde antes de publicarlo.",
+  "fijado": "2026-10-15",
+  "plataforma": { "ubuntu": "noble", "arquitectura": "x86_64" },
+  "docker": {
+    "version": "29.8.2",
+    "publicado": "2026-09-30",
+    "llave_fpr": "9DC858229FC7DD38854AE2D88D81803C0EBFCD88"
+  },
+  "gitleaks": {
+    "version": "8.30.1",
+    "publicado": "2026-03-21",
+    "archivo": "gitleaks_8.30.1_linux_x64.tar.gz",
+    "sha256": "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb",
+    "config_sha256": "e163e53b9e7e8a8511e77271e2b323ed057759542a6d988258afe3a1fa329caf"
+  },
+  "osv-scanner": {
+    "version": "2.6.0",
+    "publicado": "2026-09-14",
+    "archivo": "osv-scanner_linux_amd64",
+    "sha256": "ca69b3d3cd08f889a49dc0a383122f71cc528b83803671df5fd874d97485b108"
+  },
+  "semgrep": {
+    "version": "1.178.0",
+    "publicado": "2026-09-23",
+    "paquetes": ["default", "owasp-top-ten", "secrets", "typescript", "javascript", "react", "nodejsscan", "php", "python"]
+  },
+  "imagenes": {
+    "node": {
+      "etiqueta": "node:24.20.0-bookworm-slim",
+      "publicado": "2026-08-27",
+      "digest": "sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e"
+    },
+    "postgres": {
+      "etiqueta": "postgres:17.11-alpine",
+      "publicado": "2026-09-21",
+      "digest": "sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24"
+    }
+  },
+  "visual": {
+    "@playwright/cli": "0.1.22",
+    "@playwright/test": "1.63.0",
+    "@axe-core/playwright": "4.13.0",
+    "lighthouse": "13.5.0"
+  }
+}

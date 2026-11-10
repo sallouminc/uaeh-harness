@@ -1,0 +1,77 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["hallazgos", "cobertura", "limites"],
+  "properties": {
+    "hallazgos": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["fingerprint", "title", "description", "attack_class", "claimed_root_cause", "file", "line", "trace", "evidence", "gravedad_estimada", "confianza", "validation_plan"],
+        "properties": {
+          "fingerprint": { "type": "string", "description": "Huella estable con la forma <ruta>:<simbolo>:<clase-corta>, por ejemplo server.js:getFactura:idor" },
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "attack_class": { "type": "string", "description": "Clase de ataque, por ejemplo idor, sqli, xss, ssrf, authz, secretos" },
+          "claimed_root_cause": { "type": "string", "description": "Causa raiz afirmada, en una frase" },
+          "file": { "type": "string", "description": "Ruta relativa al repositorio" },
+          "line": { "type": "integer" },
+          "trace": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["kind", "file", "line", "scope", "description"],
+              "properties": {
+                "kind": { "type": "string", "enum": ["source", "propagation", "sink", "guard", "other"] },
+                "file": { "type": "string" },
+                "line": { "type": "integer" },
+                "scope": { "type": "string", "description": "Funcion, clase o ruta HTTP donde ocurre el paso" },
+                "description": { "type": "string" }
+              }
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["file", "line", "description"],
+              "properties": {
+                "file": { "type": "string" },
+                "line": { "type": "integer" },
+                "description": { "type": "string" }
+              }
+            }
+          },
+          "gravedad_estimada": { "type": "string", "enum": ["critico", "alto", "medio", "bajo", "desconocida"] },
+          "confianza": { "type": "integer", "description": "Confianza de 1 a 10: 1 = especulacion, 5 = probable, 10 = demostrado con el codigo leido" },
+          "validation_plan": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["local", "deployment"],
+            "properties": {
+              "local": { "type": "string", "description": "Como reproducirlo o validarlo en local" },
+              "deployment": { "type": "string", "description": "Como validarlo en el entorno desplegado, sin danar datos reales" }
+            }
+          }
+        }
+      }
+    },
+    "cobertura": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["area", "archivos_revisados", "notas"],
+        "properties": {
+          "area": { "type": "string" },
+          "archivos_revisados": { "type": "integer" },
+          "notas": { "type": "string" }
+        }
+      }
+    },
+    "limites": { "type": "string", "description": "Lo que no se pudo revisar o verificar" }
+  }
+}

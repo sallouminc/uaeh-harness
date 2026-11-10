@@ -1,0 +1,36 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "uaeh",
+  "owner": {
+    "name": "Salloum Inc",
+    "url": "https://github.com/sallouminc"
+  },
+  "metadata": {
+    "description": "UAEH — Universal Agentic Engineering Harness: a working method for coding with AI agents, as Claude Code plugins. Método de trabajo con agentes de IA, empaquetado como plugins de Claude Code.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "uaeh-kit",
+      "source": "./plugins/uaeh-kit",
+      "description": "Layer 1: the method's rules plus a token-efficiency kit (context-map injection, context watchdog, CLAUDE.md diet, usage measurement, status line). Informative only. / Capa 1: reglas del método + kit de eficiencia de tokens. Solo informa.",
+      "version": "1.0.0",
+      "author": { "name": "Salloum Inc" },
+      "license": "MIT",
+      "category": "productivity",
+      "tags": ["uaeh", "tokens", "context", "method", "efficiency"],
+      "strict": true
+    },
+    {
+      "name": "uaeh-harness",
+      "source": "./plugins/uaeh-harness",
+      "description": "Layers 2 and 3: verification harness (independent verifier and security reviewer with a read-only lock, integrity seal, task ledger, closing guard, two-layer git guard), the uae-security gate (scanners, Codex second opinion, no-network sandbox on a pinned Linux engine) the on-demand uae-visual gate (Playwright + axe checks, browser verifier, design auditor) and the on-demand uae-preflight (launch documents sealed with a risk-based validity). Hooks that block. / Capas 2 y 3: arnés de verificación, puerta de seguridad, auditoría visual y preflight bajo pedido; hooks que bloquean.",
+      "version": "1.0.0",
+      "author": { "name": "Salloum Inc" },
+      "license": "MIT",
+      "category": "development",
+      "tags": ["uaeh", "verification", "security", "harness"],
+      "strict": true
+    }
+  ]
+}

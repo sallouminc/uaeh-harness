@@ -1,0 +1,373 @@
+#!/usr/bin/python3 -I
+"""uaeh-promover - promocion de archivos de scratch/ a artifacts/ (fase de validacion de security-audit).
+
+Codigo del padre de confianza: instalar-bin.sh lo instala en /opt/uaeh/bin (root). Ningun agente lo modifica.
+
+Uso:
+  uaeh-promover --run <dir-run> --agente <id> --max-archivo <bytes> --max-total <bytes>
+                --archivo <ruta-relativa-a-scratch> [--archivo ...]
+
+Implementa los 11 pasos con descriptores de directorio (dir_fd) y O_NOFOLLOW: nunca reabre por ruta,
+nunca copia recursivo ni usa glob. Salida JSON en stdout:
+  {"promovidos":[{"ruta","bytes","sha256"}],"rechazados":[{"ruta","motivo"}]}
+Salida: 0 todo promovido | 3 hubo rechazos | 64 argumentos invalidos.
+
+La carpeta de corridas (UAEH_BASE) y el usuario (UAEH_USER) salen de /opt/uaeh/uaeh.conf (root, 0644; lo
+escribe instalar-bin.sh). Las reglas de base_valida() son las mismas que las del bloque «validar» de los
+scripts de bash (tests/harness/wsl.test.cjs compara las dos implementaciones caso por caso).
+
+UAEH_PROMOVER_BASE_PRUEBA: SOLO la usa el script de pruebas para permitir otra base (en /tmp o
+/home/<UAEH_USER>, con prefijo uaeh-prueba-). En produccion NO se fija; la base es la de uaeh.conf.
+"""
+import argparse
+import hashlib
+import json
+import os
+import re
+import stat
+import subprocess
+import sys
+
+CONF = "/opt/uaeh/uaeh.conf"
+USUARIO_RE = re.compile(r"[a-z_][a-z0-9_-]{0,31}")
+BASE_RE = re.compile(r"/[A-Za-z0-9._/-]+")
+RAICES_BASE = ("mnt", "srv", "home")
+ID_RE = re.compile(r"^[a-z0-9][a-z0-9_-]{0,63}$")
+RESERVADOS = {"con", "prn", "aux", "nul"} | {"com%d" % i for i in range(1, 10)} | {"lpt%d" % i for i in range(1, 10)}
+MAX_RUTA = 1024
+MAX_COMPONENTE = 255
+MAX_LIMITE = 1 << 40
+BANDERAS_DIR = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
+CHUNK = 1 << 16
+
+
+class Invalido(Exception):
+    """Argumento invalido (salida 64)."""
+
+
+class Rechazo(Exception):
+    """Archivo individual rechazado (va a 'rechazados')."""
+
+
+class Parser(argparse.ArgumentParser):
+    def error(self, mensaje):
+        raise Invalido(mensaje)
+
+
+def usuario_valido(u):
+    return isinstance(u, str) and USUARIO_RE.fullmatch(u) is not None and u != "root"
+
+
+def base_valida(b, u):
+    """Mismas reglas que base_valida() de bash: absoluta, sin '.', '..', '//' ni '/' final, 3 niveles o mas,
+    y colgando de /mnt, /srv o /home/<usuario>."""
+    if not isinstance(b, str) or BASE_RE.fullmatch(b) is None:
+        return False
+    if "//" in b or b.endswith("/"):
+        return False
+    partes = b[1:].split("/")
+    if any(c in (".", "..") for c in partes) or len(partes) < 3:
+        return False
+    if partes[0] not in RAICES_BASE:
+        return False
+    if partes[0] == "home" and partes[1] != u:
+        return False
+    return True
+
+
+def leer_conf(ruta=CONF, exigir_root=True):
+    """uaeh.conf: solo UAEH_BASE y UAEH_USER; de root y sin escritura para grupo u otros; valores revalidados."""
+    try:
+        fd = os.open(ruta, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+    except OSError:
+        raise Invalido("falta %s o no se puede leer (lo escribe wsl/instalar-bin.sh del plugin, como root)" % ruta)
+    try:
+        st = os.fstat(fd)
+        if not stat.S_ISREG(st.st_mode):
+            raise Invalido("%s no es un archivo regular" % ruta)
+        if exigir_root and (st.st_uid != 0 or st.st_mode & 0o022):
+            raise Invalido("%s debe ser de root y no escribible por el grupo ni por otros" % ruta)
+        datos = os.read(fd, 65536)
+    finally:
+        os.close(fd)
+    try:
+        texto = datos.decode("utf-8")
+    except UnicodeDecodeError:
+        raise Invalido("%s no es UTF-8" % ruta)
+    conf = {}
+    for linea in texto.split("\n"):
+        if linea == "" or linea.startswith("#"):
+            continue
+        m = re.fullmatch(r"(UAEH_BASE|UAEH_USER)=(.*)", linea)
+        if m is None:
+            raise Invalido("linea desconocida en %s" % ruta)
+        conf[m.group(1)] = m.group(2)
+    usuario, base = conf.get("UAEH_USER", ""), conf.get("UAEH_BASE", "")
+    if not usuario_valido(usuario):
+        raise Invalido("UAEH_USER invalido en %s" % ruta)
+    if not base_valida(base, usuario):
+        raise Invalido("UAEH_BASE invalido en %s" % ruta)
+    return {"base": base, "usuario": usuario}
+
+
+def base_permitida(conf):
+    extra = os.environ.get("UAEH_PROMOVER_BASE_PRUEBA")
+    if extra:
+        patron = r"/(tmp|home/%s)/uaeh-prueba-[A-Za-z0-9._-]{1,60}" % re.escape(conf["usuario"])
+        if re.fullmatch(patron, extra) is None:
+            raise Invalido("UAEH_PROMOVER_BASE_PRUEBA fuera de lo permitido")
+        return extra
+    return conf["base"]
+
+
+def normaliza_run(valor, base):
+    p = valor
+    if re.match(r"^[A-Za-z]:[\\/]", p):
+        if not os.path.exists("/usr/bin/wslpath"):
+            raise Invalido("ruta de Windows fuera de WSL (usar la ruta de Linux)")
+        try:
+            r = subprocess.run(["/usr/bin/wslpath", "-u", p], capture_output=True, text=True,
+                               env={"PATH": "/usr/bin:/bin"}, timeout=10)
+        except Exception:
+            raise Invalido("no se pudo convertir la ruta con wslpath")
+        if r.returncode != 0:
+            raise Invalido("wslpath no convirtio la ruta")
+        p = r.stdout.strip()
+    while len(p) > 1 and p.endswith("/"):
+        p = p[:-1]
+    # La base entra LITERAL (re.escape) y fullmatch: ni un '.' de la base ni un salto de linea final cuelan.
+    if re.fullmatch(re.escape(base) + r"/[A-Za-z0-9._-]{1,80}/run-[0-9]{1,6}", p) is None:
+        raise Invalido("run fuera de la base permitida (<base>/<repo>/run-N)")
+    partes = p.split("/")
+    if ".." in partes or "." in partes:
+        raise Invalido("ruta con . o ..")
+    return p
+
+
+def abrir_dir(dirfd, nombre):
+    """Abre un componente como directorio real, sin seguir enlaces, y lo verifica con fstat."""
+    fd = os.open(nombre, BANDERAS_DIR, dir_fd=dirfd)
+    try:
+        if not stat.S_ISDIR(os.fstat(fd).st_mode):
+            raise OSError("no es directorio")
+    except BaseException:
+        os.close(fd)
+        raise
+    return fd
+
+
+def abrir_desde_raiz(ruta_abs):
+    """Camina cada componente desde '/' con O_NOFOLLOW; devuelve el fd del directorio final."""
+    fd = os.open("/", BANDERAS_DIR)
+    try:
+        for comp in [c for c in ruta_abs.split("/") if c]:
+            nuevo = abrir_dir(fd, comp)
+            os.close(fd)
+            fd = nuevo
+    except BaseException:
+        os.close(fd)
+        raise
+    return fd
+
+
+def abrir_o_crear_dir(dirfd, nombre):
+    """Paso 7: componente existente debe ser directorio real; si falta se crea de forma exclusiva y se reabre."""
+    try:
+        return abrir_dir(dirfd, nombre)
+    except FileNotFoundError:
+        pass
+    os.mkdir(nombre, 0o755, dir_fd=dirfd)  # exclusivo: falla si aparece otro entre medias
+    return abrir_dir(dirfd, nombre)
+
+
+def valida_ruta_declarada(ruta):
+    """Paso 1: rechaza absoluta, vacia, '.', '..', y formas ambiguas."""
+    if not isinstance(ruta, str) or ruta == "":
+        raise Rechazo("ruta vacia")
+    if "\x00" in ruta:
+        raise Rechazo("ruta con byte nulo")
+    if "\\" in ruta:
+        raise Rechazo("ruta con barra invertida")
+    if ruta.startswith("/"):
+        raise Rechazo("ruta absoluta")
+    if len(ruta) > MAX_RUTA:
+        raise Rechazo("ruta demasiado larga")
+    partes = ruta.split("/")
+    for c in partes:
+        if c == "":
+            raise Rechazo("componente vacio")
+        if c in (".", ".."):
+            raise Rechazo("componente '.' o '..'")
+        if len(c) > MAX_COMPONENTE:
+            raise Rechazo("componente demasiado largo")
+        if re.match(r"^[A-Za-z]:", c):
+            raise Rechazo("componente con letra de unidad")
+        if c.split(".")[0].lower().rstrip(" ") in RESERVADOS:
+            raise Rechazo("nombre de dispositivo de Windows")
+        if c.endswith(" ") or c.endswith("."):
+            raise Rechazo("componente termina en espacio o punto")
+    return partes
+
+
+def leer_exacto(fd, tam, max_archivo):
+    """Paso 5-6: lee exactamente 'tam' bytes respetando el limite; cualquier byte extra = cambio."""
+    tope = min(tam, max_archivo)
+    partes, leido = [], 0
+    while leido < tope:
+        b = os.read(fd, min(CHUNK, tope - leido))
+        if not b:
+            break
+        partes.append(b)
+        leido += len(b)
+    if leido != tam:
+        raise Rechazo("el archivo cambio de tamano durante la lectura")
+    if os.read(fd, 1):
+        raise Rechazo("el archivo crecio durante la lectura")
+    return b"".join(partes)
+
+
+def promover(scratch_fd, artifacts_fd, ruta, max_archivo, restante):
+    partes = valida_ruta_declarada(ruta)  # paso 1
+    abiertos = []
+    try:
+        # paso 2: caminar los padres desde el descriptor de scratch
+        cur = scratch_fd
+        for comp in partes[:-1]:
+            try:
+                cur = abrir_dir(cur, comp)
+            except OSError as e:
+                raise Rechazo("componente intermedio no es directorio real (%s)" % (e.strerror or "error"))
+            abiertos.append(cur)
+        # paso 3: hoja sin seguir enlaces y sin bloquear
+        try:
+            fd = os.open(partes[-1], os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC, dir_fd=cur)
+        except OSError as e:
+            raise Rechazo("no se pudo abrir la hoja sin seguir enlaces (%s)" % (e.strerror or "error"))
+        abiertos.append(fd)
+        # paso 4
+        st1 = os.fstat(fd)
+        if not stat.S_ISREG(st1.st_mode):
+            raise Rechazo("no es archivo regular")
+        if st1.st_nlink != 1:
+            raise Rechazo("enlace duro (nlink=%d)" % st1.st_nlink)
+        if st1.st_size > max_archivo:
+            raise Rechazo("excede el limite por archivo")
+        if st1.st_size > restante:
+            raise Rechazo("excede el limite acumulado")
+        # pasos 5-6
+        datos = leer_exacto(fd, st1.st_size, max_archivo)
+        st2 = os.fstat(fd)
+        if (st2.st_dev, st2.st_ino) != (st1.st_dev, st1.st_ino):
+            raise Rechazo("cambio la identidad del archivo")
+        if stat.S_IFMT(st2.st_mode) != stat.S_IFMT(st1.st_mode):
+            raise Rechazo("cambio el tipo del archivo")
+        if st2.st_nlink != st1.st_nlink:
+            raise Rechazo("cambio el numero de enlaces")
+        if st2.st_size != st1.st_size:
+            raise Rechazo("cambio el tamano del archivo")
+        # paso 7: destino
+        dcur = artifacts_fd
+        for comp in partes[:-1]:
+            try:
+                dcur = abrir_o_crear_dir(dcur, comp)
+            except OSError as e:
+                raise Rechazo("destino: componente no es directorio real (%s)" % (e.strerror or "error"))
+            abiertos.append(dcur)
+        # paso 8
+        try:
+            dfd = os.open(partes[-1], os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC,
+                          0o644, dir_fd=dcur)
+        except OSError as e:
+            raise Rechazo("destino: no se pudo crear de forma exclusiva (%s)" % (e.strerror or "error"))
+        abiertos.append(dfd)
+        try:
+            sd = os.fstat(dfd)
+            if not stat.S_ISREG(sd.st_mode) or sd.st_nlink != 1:
+                raise Rechazo("destino no es regular con nlink 1")
+            vistos = 0
+            while vistos < len(datos):
+                vistos += os.write(dfd, datos[vistos:vistos + CHUNK])
+        except BaseException:
+            try:
+                os.unlink(partes[-1], dir_fd=dcur)  # descarta copia parcial (la creamos nosotros, O_EXCL)
+            except OSError:
+                pass
+            raise
+        return {"ruta": ruta, "bytes": len(datos), "sha256": hashlib.sha256(datos).hexdigest()}
+    finally:
+        for a in abiertos:
+            try:
+                os.close(a)
+            except OSError:
+                pass
+
+
+def entero(v):
+    try:
+        n = int(v)
+    except ValueError:
+        raise Invalido("limite no numerico")
+    if n < 0 or n > MAX_LIMITE:
+        raise Invalido("limite fuera de rango")
+    return n
+
+
+def principal(argv):
+    p = Parser(prog="uaeh-promover", add_help=False)
+    p.add_argument("--run", required=True)
+    p.add_argument("--agente", required=True)
+    p.add_argument("--max-archivo", required=True)
+    p.add_argument("--max-total", required=True)
+    p.add_argument("--archivo", action="append", default=[])
+    a = p.parse_args(argv)
+    if ID_RE.fullmatch(a.agente) is None or a.agente in RESERVADOS:
+        raise Invalido("agente invalido")
+    max_archivo, max_total = entero(a.max_archivo), entero(a.max_total)
+    run = normaliza_run(a.run, base_permitida(leer_conf()))
+
+    # Antes de ejecutar: raices retenidas (no heredables: O_CLOEXEC) caminando desde '/'
+    try:
+        agente_fd = abrir_desde_raiz(run + "/agents/" + a.agente)
+    except OSError as e:
+        raise Invalido("no se pudo abrir agents/<agente> (%s)" % (e.strerror or "error"))
+    resultado = {"promovidos": [], "rechazados": []}
+    try:
+        try:
+            scratch_fd = abrir_dir(agente_fd, "scratch")
+        except OSError as e:
+            scratch_fd = None
+            motivo = "scratch/ no se pudo abrir (%s)" % (e.strerror or "error")
+        try:
+            artifacts_fd = abrir_o_crear_dir(agente_fd, "artifacts")
+        except OSError as e:
+            artifacts_fd = None
+            motivo = "artifacts/ no se pudo abrir ni crear (%s)" % (e.strerror or "error")
+        try:
+            usado = 0
+            for ruta in a.archivo:
+                try:
+                    if scratch_fd is None or artifacts_fd is None:
+                        raise Rechazo(motivo)  # paso 11: si un control no se puede aplicar, se descarta
+                    r = promover(scratch_fd, artifacts_fd, ruta, max_archivo, max_total - usado)
+                    usado += r["bytes"]
+                    resultado["promovidos"].append(r)
+                except Rechazo as e:
+                    resultado["rechazados"].append({"ruta": ruta, "motivo": str(e)})
+                except OSError as e:
+                    resultado["rechazados"].append({"ruta": ruta, "motivo": "error de E/S: %s" % (e.strerror or "error")})
+        finally:
+            for fd in (scratch_fd, artifacts_fd):
+                if fd is not None:
+                    os.close(fd)
+    finally:
+        os.close(agente_fd)
+    sys.stdout.write(json.dumps(resultado, ensure_ascii=True) + "\n")
+    return 3 if resultado["rechazados"] else 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(principal(sys.argv[1:]))
+    except Invalido as e:
+        sys.stderr.write("uaeh-promover: ERROR: %s\n" % e)
+        sys.exit(64)

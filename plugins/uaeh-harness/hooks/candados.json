@@ -1,0 +1,5 @@
+{
+  "_comentario": "Qué agentes (sin el prefijo del plugin) quedan bajo cada candado. Lo lee hooks/_identidad.js. solo-lectura.js usa la clave solo-lectura (lista negra) y solo-navegador.js la clave solo-navegador (lista blanca del verificador de navegador); un agente puede estar bajo los dos.",
+  "solo-lectura": ["uae-verifier", "uae-security", "browser-verifier"],
+  "solo-navegador": ["browser-verifier"]
+}

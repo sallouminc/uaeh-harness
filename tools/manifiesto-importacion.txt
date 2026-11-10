@@ -1,0 +1,239 @@
+# tools/manifiesto-importacion.txt — de dónde sale cada archivo de este repositorio.
+#
+# Los archivos de los plugins nacen en la configuración personal de su autor y se importan UNO POR UNO,
+# nombrados aquí: nunca por carpeta ni por comodín (esa configuración también guarda credenciales,
+# transcripciones y datos ajenos). Lo leen dos herramientas:
+#   · tools/importar-lista-blanca.cjs  compara y copia lo que falta (en seco por defecto).
+#   · tools/verificar-publicacion.cjs  todo archivo rastreado bajo plugins/ debe figurar aquí.
+#
+# Formato (texto plano; «#» abre un comentario; las líneas en blanco se ignoran):
+#   [importados]          K/<ruta de origen> -> <ruta de destino dentro del repo>
+#                         X/<ruta de origen> -> <ruta de destino dentro del repo>
+#       K/  carpeta de configuración de Claude Code del usuario (CLAUDE_CONFIG_DIR o ~/.claude)
+#       X/  carpeta de configuración de Codex del usuario (CODEX_HOME o ~/.codex)
+#       El destino se edita después de importar (limpieza, traducción, rutas): por eso importar
+#       nunca pisa un destino existente sin --forzar.
+#   [nuevos]              una ruta del repo por línea: archivos escritos aquí, sin origen externo.
+#   [grandes-permitidos]  una ruta del repo por línea: archivos de más de 200 KB admitidos a propósito.
+#   [terceros]            una carpeta plugins/<plugin>/vendor/<nombre> por línea: código de terceros copiado de su
+#                         repositorio público. Su procedencia no vive aquí sino en su UPSTREAM.json (origen, licencia,
+#                         commit y la huella de cada archivo); verificar-publicacion comprueba esas huellas.
+# Todas las rutas son relativas, con «/» y sin «..».
+
+[importados]
+
+# Capa 1 (uaeh-kit) · hooks
+K/hooks/router-context-inject.js -> plugins/uaeh-kit/hooks/inyectar-contexto.js
+K/hooks/vigia-contexto.js -> plugins/uaeh-kit/hooks/vigia-contexto.js
+
+# Capa 1 (uaeh-kit) · scripts de medición y de dieta
+K/scripts/ventana-contexto.cjs -> plugins/uaeh-kit/scripts/ventana-contexto.cjs
+K/scripts/uso-tokens.cjs -> plugins/uaeh-kit/scripts/uso-tokens.cjs
+K/scripts/uso-pasos.cjs -> plugins/uaeh-kit/scripts/uso-pasos.cjs
+K/scripts/uso-herramientas.cjs -> plugins/uaeh-kit/scripts/uso-herramientas.cjs
+K/scripts/uaeh-listado-skills.cjs -> plugins/uaeh-kit/scripts/uaeh-listado-skills.cjs
+K/scripts/verificar-dieta-claudemd.cjs -> plugins/uaeh-kit/scripts/verificar-dieta-claudemd.cjs
+K/scripts/DIETA-CLAUDEMD.md -> plugins/uaeh-kit/skills/dieta/referencias/dieta.md
+
+# Capa 1 (uaeh-kit) · barra de estado
+K/statusline.js -> plugins/uaeh-kit/statusline/statusline.js
+K/claude-status-fetch.js -> plugins/uaeh-kit/statusline/claude-status-fetch.js
+
+# Capa 1 (uaeh-kit) · plantilla de proyecto
+K/plantilla-proyecto/CLAUDE.md -> plugins/uaeh-kit/templates/proyecto/CLAUDE.md
+K/plantilla-proyecto/tasks/context-map.md -> plugins/uaeh-kit/templates/proyecto/tasks/context-map.md
+K/plantilla-proyecto/tasks/todo.md -> plugins/uaeh-kit/templates/proyecto/tasks/todo.md
+K/plantilla-proyecto/tasks/lessons.md -> plugins/uaeh-kit/templates/proyecto/tasks/lessons.md
+
+# Capa 2 (uaeh-harness) · hooks que bloquean (parametrizados por uaeh.config.json y neutralizados)
+K/hooks/guardia-git.js -> plugins/uaeh-harness/hooks/guardia-git.js
+K/hooks/guardia-commit.cjs -> plugins/uaeh-harness/hooks/guardia-commit.cjs
+K/hooks/solo-lectura.js -> plugins/uaeh-harness/hooks/solo-lectura.js
+K/hooks/uaeh-guardia-cierre.js -> plugins/uaeh-harness/hooks/uaeh-guardia-cierre.js
+
+# Capa 2 (uaeh-harness) · guarda global de git (19 despachadores sh; git-hooks/ y hooks/ son hermanas)
+K/git-hooks/applypatch-msg -> plugins/uaeh-harness/git-hooks/applypatch-msg
+K/git-hooks/commit-msg -> plugins/uaeh-harness/git-hooks/commit-msg
+K/git-hooks/post-applypatch -> plugins/uaeh-harness/git-hooks/post-applypatch
+K/git-hooks/post-checkout -> plugins/uaeh-harness/git-hooks/post-checkout
+K/git-hooks/post-commit -> plugins/uaeh-harness/git-hooks/post-commit
+K/git-hooks/post-merge -> plugins/uaeh-harness/git-hooks/post-merge
+K/git-hooks/post-receive -> plugins/uaeh-harness/git-hooks/post-receive
+K/git-hooks/post-rewrite -> plugins/uaeh-harness/git-hooks/post-rewrite
+K/git-hooks/post-update -> plugins/uaeh-harness/git-hooks/post-update
+K/git-hooks/pre-applypatch -> plugins/uaeh-harness/git-hooks/pre-applypatch
+K/git-hooks/pre-auto-gc -> plugins/uaeh-harness/git-hooks/pre-auto-gc
+K/git-hooks/pre-commit -> plugins/uaeh-harness/git-hooks/pre-commit
+K/git-hooks/pre-merge-commit -> plugins/uaeh-harness/git-hooks/pre-merge-commit
+K/git-hooks/pre-push -> plugins/uaeh-harness/git-hooks/pre-push
+K/git-hooks/pre-rebase -> plugins/uaeh-harness/git-hooks/pre-rebase
+K/git-hooks/pre-receive -> plugins/uaeh-harness/git-hooks/pre-receive
+K/git-hooks/prepare-commit-msg -> plugins/uaeh-harness/git-hooks/prepare-commit-msg
+K/git-hooks/sendemail-validate -> plugins/uaeh-harness/git-hooks/sendemail-validate
+K/git-hooks/update -> plugins/uaeh-harness/git-hooks/update
+
+# Capa 2 (uaeh-harness) · sello de integridad, registro, resumen y huella
+K/scripts/uaeh-integridad.cjs -> plugins/uaeh-harness/scripts/uaeh-integridad.cjs
+K/scripts/uaeh-registro.cjs -> plugins/uaeh-harness/scripts/uaeh-registro.cjs
+K/scripts/uaeh-resumen.cjs -> plugins/uaeh-harness/scripts/uaeh-resumen.cjs
+K/scripts/uaeh-huella.cjs -> plugins/uaeh-harness/scripts/uaeh-huella.cjs
+
+# Capa 2 (uaeh-harness) · agentes neutrales (sin `hooks:` en el frontmatter; el candado vive en hooks.json)
+K/agents/uae-verifier.md -> plugins/uaeh-harness/agents/uae-verifier.md
+K/agents/uae-security.md -> plugins/uaeh-harness/agents/uae-security.md
+K/agents/uae-builder.md -> plugins/uaeh-harness/agents/uae-builder.md
+K/agents/uae-architect.md -> plugins/uaeh-harness/agents/uae-architect.md
+K/agents/uae-triage.md -> plugins/uaeh-harness/agents/uae-triage.md
+
+# Capa 2 (uaeh-harness) · skill uae-loop (reescritura pública)
+K/skills/uae-loop/SKILL.md -> plugins/uaeh-harness/skills/uae-loop/SKILL.md
+K/skills/uae-loop/referencias/concurrencia.md -> plugins/uaeh-harness/skills/uae-loop/referencias/concurrencia.md
+K/skills/uae-loop/referencias/estados-y-paro.md -> plugins/uaeh-harness/skills/uae-loop/referencias/estados-y-paro.md
+K/skills/uae-loop/referencias/puertas.md -> plugins/uaeh-harness/skills/uae-loop/referencias/puertas.md
+
+# Capa 2 (uaeh-harness) · Codex opcional (plantillas con marcadores; config.toml NUNCA se copia)
+X/AGENTS.md -> plugins/uaeh-harness/codex/AGENTS.md
+X/agents/uae_architect.toml -> plugins/uaeh-harness/codex/agents/uae_architect.toml
+X/agents/uae_builder.toml -> plugins/uaeh-harness/codex/agents/uae_builder.toml
+X/agents/uae_security.toml -> plugins/uaeh-harness/codex/agents/uae_security.toml
+X/agents/uae_triage.toml -> plugins/uaeh-harness/codex/agents/uae_triage.toml
+X/agents/uae_verifier.toml -> plugins/uaeh-harness/codex/agents/uae_verifier.toml
+
+# Capa 3 (uaeh-harness) · lista blanca del verificador de navegador (compuerta por identidad; config de confianza calculada)
+K/hooks/solo-navegador.js -> plugins/uaeh-harness/hooks/solo-navegador.js
+K/uaeh/playwright-cli.config.json -> plugins/uaeh-harness/templates/playwright-cli.config.json
+
+# Capa 3 (uaeh-harness) · puerta de seguridad: auditor Codex de solo lectura (niveles de modelo desde la configuración)
+K/skills/uae-security/scripts/auditor-codex.cjs -> plugins/uaeh-harness/skills/uae-security/scripts/auditor-codex.cjs
+K/skills/uae-security/referencias/codex-salida.schema.json -> plugins/uaeh-harness/skills/uae-security/referencias/codex-salida.schema.json
+K/skills/uae-security/referencias/prompt-codex.md -> plugins/uaeh-harness/skills/uae-security/referencias/prompt-codex.md
+K/skills/uae-security/referencias/codex.md -> plugins/uaeh-harness/skills/uae-security/referencias/codex.md
+
+# Capa 3 (uaeh-harness) · puerta de seguridad: pasada determinista, skill y referencias (rutas por plugin, motor de Linux por runner)
+K/skills/uae-security/scripts/pasada-determinista.cjs -> plugins/uaeh-harness/skills/uae-security/scripts/pasada-determinista.cjs
+K/skills/uae-security/SKILL.md -> plugins/uaeh-harness/skills/uae-security/SKILL.md
+K/skills/uae-security/referencias/caja-de-arena.md -> plugins/uaeh-harness/skills/uae-security/referencias/caja-de-arena.md
+K/skills/uae-security/referencias/dinero-toctou.md -> plugins/uaeh-harness/skills/uae-security/referencias/dinero-toctou.md
+K/skills/uae-security/referencias/escala-y-estados.md -> plugins/uaeh-harness/skills/uae-security/referencias/escala-y-estados.md
+K/skills/uae-security/referencias/filtro-falsos-positivos.md -> plugins/uaeh-harness/skills/uae-security/referencias/filtro-falsos-positivos.md
+K/skills/uae-security/referencias/lanzamiento.md -> plugins/uaeh-harness/skills/uae-security/referencias/lanzamiento.md
+K/skills/uae-security/referencias/roles-y-presupuesto.md -> plugins/uaeh-harness/skills/uae-security/referencias/roles-y-presupuesto.md
+# La lista previa al lanzamiento nace de la skill propia checklist-seguridad (limpia de proyectos, personas y rutas).
+K/skills/checklist-seguridad/SKILL.md -> plugins/uaeh-harness/skills/uae-security/referencias/checklist-prelanzamiento.md
+
+# Capa 3 (uaeh-harness) · motor de Linux: instaladores (pines en herramientas.json), caja de arena y autopruebas.
+# La base de corridas y el usuario salen de /opt/uaeh/uaeh.conf (lo escribe instalar-bin.sh como root); la
+# configuración de gitleaks que antes instalaba instalar-gitleaks-config.sh quedó dentro de instalar.sh.
+K/uaeh/wsl/instalar.sh -> plugins/uaeh-harness/wsl/instalar.sh
+K/uaeh/wsl/instalar-bin.sh -> plugins/uaeh-harness/wsl/instalar-bin.sh
+K/uaeh/wsl/bin/uaeh-sandbox -> plugins/uaeh-harness/wsl/bin/uaeh-sandbox
+K/uaeh/wsl/bin/uaeh-promover -> plugins/uaeh-harness/wsl/bin/uaeh-promover
+K/uaeh/wsl/bin/uaeh-validar -> plugins/uaeh-harness/wsl/bin/uaeh-validar
+K/uaeh/wsl/contenedor/armar.sh -> plugins/uaeh-harness/wsl/contenedor/armar.sh
+K/uaeh/wsl/pruebas/probar-sandbox.sh -> plugins/uaeh-harness/wsl/pruebas/probar-sandbox.sh
+K/uaeh/wsl/pruebas/probar-promover.sh -> plugins/uaeh-harness/wsl/pruebas/probar-promover.sh
+K/uaeh/wsl/pruebas/probar-pnpmfile.sh -> plugins/uaeh-harness/wsl/pruebas/probar-pnpmfile.sh
+
+# Capa 3 (uaeh-harness) · puerta visual bajo pedido: skill, plantillas de Playwright + axe, clasificador y comprobador
+# del catálogo (rutas desde la configuración; el catálogo publicado es genérico por roles y el del usuario vive en
+# UAEH_HOME/catalogo-visual.md). La lista de exclusiones de evidencia ya no viaja aparte: la fuente única es uaeh-ignorar.cjs.
+K/skills/uae-visual/SKILL.md -> plugins/uaeh-harness/skills/uae-visual/SKILL.md
+K/skills/uae-visual/referencias/catalogo.md -> plugins/uaeh-harness/skills/uae-visual/referencias/catalogo.md
+K/skills/uae-visual/referencias/estados-y-formato.md -> plugins/uaeh-harness/skills/uae-visual/referencias/estados-y-formato.md
+K/skills/uae-visual/referencias/plantilla-DESIGN.md -> plugins/uaeh-harness/skills/uae-visual/referencias/plantilla-DESIGN.md
+K/skills/uae-visual/plantillas/playwright.visual.config.ts -> plugins/uaeh-harness/skills/uae-visual/plantillas/playwright.visual.config.ts
+K/skills/uae-visual/plantillas/visual.spec.ts -> plugins/uaeh-harness/skills/uae-visual/plantillas/visual.spec.ts
+K/skills/uae-visual/scripts/clasificar-resultados.cjs -> plugins/uaeh-harness/skills/uae-visual/scripts/clasificar-resultados.cjs
+K/skills/uae-visual/scripts/comprobar-catalogo.cjs -> plugins/uaeh-harness/skills/uae-visual/scripts/comprobar-catalogo.cjs
+# Autoprueba de la puerta (sitio bueno y sitio malo con fallas sembradas). Sin node_modules: las dependencias se
+# instalan en UAEH_HOME/cache/visual-fixture con los pines de wsl/herramientas.json.
+K/uaeh/pruebas-visual/probar-visual.cjs -> plugins/uaeh-harness/skills/uae-visual/pruebas/probar-visual.cjs
+K/uaeh/pruebas-visual/servidor.cjs -> plugins/uaeh-harness/skills/uae-visual/pruebas/servidor.cjs
+K/uaeh/pruebas-visual/package.json -> plugins/uaeh-harness/skills/uae-visual/pruebas/package.json
+K/uaeh/pruebas-visual/package-lock.json -> plugins/uaeh-harness/skills/uae-visual/pruebas/package-lock.json
+K/uaeh/pruebas-visual/DESIGN.md -> plugins/uaeh-harness/skills/uae-visual/pruebas/DESIGN.md
+K/uaeh/pruebas-visual/sitio-buena/index.html -> plugins/uaeh-harness/skills/uae-visual/pruebas/sitio-buena/index.html
+K/uaeh/pruebas-visual/sitio-mala/index.html -> plugins/uaeh-harness/skills/uae-visual/pruebas/sitio-mala/index.html
+# Agentes de la puerta visual: sin hooks en el frontmatter (los candados viajan en hooks.json con compuerta por identidad).
+K/agents/browser-verifier.md -> plugins/uaeh-harness/agents/browser-verifier.md
+K/agents/design-auditor.md -> plugins/uaeh-harness/agents/design-auditor.md
+# Capa 3 (uaeh-harness) · preflight bajo pedido: la skill y sus 5 referencias. Las referencias pasan a ser la fuente de verdad
+# (sin la numeración ni las citas del documento interno del que salieron); la legal suma el aviso y la jurisdicción configurable.
+K/skills/uae-preflight/SKILL.md -> plugins/uaeh-harness/skills/uae-preflight/SKILL.md
+K/skills/uae-preflight/referencias/checks-por-stack.md -> plugins/uaeh-harness/skills/uae-preflight/referencias/checks-por-stack.md
+K/skills/uae-preflight/referencias/escala.md -> plugins/uaeh-harness/skills/uae-preflight/referencias/escala.md
+K/skills/uae-preflight/referencias/formato.md -> plugins/uaeh-harness/skills/uae-preflight/referencias/formato.md
+K/skills/uae-preflight/referencias/legal.md -> plugins/uaeh-harness/skills/uae-preflight/referencias/legal.md
+K/skills/uae-preflight/referencias/seguridad.md -> plugins/uaeh-harness/skills/uae-preflight/referencias/seguridad.md
+
+[nuevos]
+
+# Capa 1 (uaeh-kit) · escritos para este repositorio
+plugins/uaeh-kit/.claude-plugin/plugin.json
+plugins/uaeh-kit/hooks/hooks.json
+plugins/uaeh-kit/scripts/lib/comun.cjs
+plugins/uaeh-kit/scripts/doctor.cjs
+plugins/uaeh-kit/scripts/instalar.cjs
+plugins/uaeh-kit/skills/setup/SKILL.md
+plugins/uaeh-kit/skills/doctor/SKILL.md
+plugins/uaeh-kit/skills/medir/SKILL.md
+plugins/uaeh-kit/skills/dieta/SKILL.md
+# El bloque de reglas se redactó aquí a partir de las secciones de método del CLAUDE.md global del autor
+# (eficiencia de tokens, cabina limpia, qué leer, auto-guardado, compactación): reescritura neutral, no copia.
+plugins/uaeh-kit/templates/bloque-claude-md.md
+plugins/uaeh-kit/templates/bloque-claude-md.en.md
+plugins/uaeh-kit/templates/settings-snippet.json
+plugins/uaeh-kit/README.md
+plugins/uaeh-kit/README.es.md
+
+# Capa 2 (uaeh-harness) · escritos para este repositorio
+plugins/uaeh-harness/.claude-plugin/plugin.json
+plugins/uaeh-harness/README.md
+plugins/uaeh-harness/README.es.md
+plugins/uaeh-harness/hooks/hooks.json
+plugins/uaeh-harness/hooks/_identidad.js
+plugins/uaeh-harness/hooks/candados.json
+plugins/uaeh-harness/hooks/linea-inicio.cjs
+# comun.cjs es la MISMA biblioteca del kit (copia byte a byte; lo exige tests/harness/comun-espejo.test.cjs)
+plugins/uaeh-harness/scripts/lib/comun.cjs
+plugins/uaeh-harness/scripts/lib/config.cjs
+plugins/uaeh-harness/scripts/lib/runner.cjs
+plugins/uaeh-harness/scripts/instalar.cjs
+plugins/uaeh-harness/skills/setup/SKILL.md
+plugins/uaeh-harness/templates/uaeh.config.example.json
+plugins/uaeh-harness/codex/README.md
+# El fragmento de config.toml se redactó aquí con las 4 claves públicas del método (nunca se copia el config.toml del autor).
+plugins/uaeh-harness/codex/config.snippet.toml
+
+# Capa 3 (uaeh-harness) · escritos para este repositorio
+plugins/uaeh-harness/scripts/uaeh-config.cjs
+plugins/uaeh-harness/scripts/uaeh-ignorar.cjs
+plugins/uaeh-harness/skills/uae-security/referencias/prompt-codex.en.md
+# Aplica, verifica y revierte el parche de vendor/cyber-neo (identifica cada versión por su huella).
+plugins/uaeh-harness/scripts/aplicar-parche-cyber-neo.cjs
+# Motor de Linux: solo pines (versiones, huellas de las descargas, digests de imágenes) y la guía de instalación.
+plugins/uaeh-harness/wsl/herramientas.json
+plugins/uaeh-harness/wsl/README.md
+# Plantillas de script de verificación que el preflight le cita al proyecto (0 pasa · 1 falla · 3 sin pruebas reales).
+plugins/uaeh-harness/templates/verify.ps1
+plugins/uaeh-harness/templates/verify.sh
+# F3: doctores (capa 2 y puertas), instalación de puertas, retención de corridas y el informe de solo lectura del motor.
+plugins/uaeh-harness/scripts/lib/diagnostico.cjs
+plugins/uaeh-harness/scripts/doctor.cjs
+plugins/uaeh-harness/scripts/doctor-puertas.cjs
+plugins/uaeh-harness/scripts/instalar-puertas.cjs
+plugins/uaeh-harness/scripts/uaeh-runs.cjs
+plugins/uaeh-harness/skills/doctor/SKILL.md
+plugins/uaeh-harness/wsl/estado.sh
+plugins/uaeh-harness/wsl/desinstalar.sh
+
+[grandes-permitidos]
+# Ninguno todavía: ningún archivo del repo pasa de 200 KB.
+
+[terceros]
+# cyber-neo (MIT, github.com/Hainrixz/cyber-neo): los 2 scripts de escaneo y 14 referencias, con el parche 0001.
+plugins/uaeh-harness/vendor/cyber-neo
+# security-audit (MIT, github.com/cloudflare/security-audit-skill): la skill completa sin cambios (protocolo + validadores).
+plugins/uaeh-harness/vendor/security-audit
+# web-interface-guidelines (MIT, github.com/vercel-labs/web-interface-guidelines): command.md fijado, sin cambios.
+plugins/uaeh-harness/vendor/web-interface-guidelines

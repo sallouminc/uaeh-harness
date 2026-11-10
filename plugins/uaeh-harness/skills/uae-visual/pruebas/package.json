@@ -1,0 +1,10 @@
+{
+  "name": "uaeh-pruebas-visual",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Fixture de autoprueba de la puerta visual de UAEH (skill uae-visual)",
+  "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.63.0"
+  }
+}

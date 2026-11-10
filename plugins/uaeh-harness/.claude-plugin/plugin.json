@@ -1,0 +1,13 @@
+{
+  "name": "uaeh-harness",
+  "version": "1.0.0",
+  "description": "UAEH layers 2 and 3. Layer 2: verification harness. Whoever builds never verifies: independent verifier and security reviewer (read-only lock by identity), integrity seal around every review, task ledger, closing guard and a two-layer git guard (text filter + global git hooks). Hooks here BLOCK. Layer 3: the uae-security gate (deterministic scanner pass, Codex second opinion, no-network sandbox on a pinned Linux engine) and the on-demand visual gate (deterministic Playwright + axe checks, a browser verifier under an allowlist lock and a read-only design auditor, one round) and the on-demand preflight (inventory, launch documents and a seal whose validity depends on the risk). / Capas 2 y 3 del método UAEH: arnés de verificación, puerta de seguridad, auditoría visual y preflight bajo pedido; sus hooks bloquean.",
+  "author": {
+    "name": "Salloum Inc",
+    "url": "https://github.com/sallouminc"
+  },
+  "homepage": "https://github.com/sallouminc/uaeh-harness",
+  "repository": "https://github.com/sallouminc/uaeh-harness",
+  "license": "MIT",
+  "keywords": ["uaeh", "verification", "security", "harness", "gates"]
+}

@@ -1,0 +1,148 @@
+{
+  "nombre": "cyber-neo",
+  "origen": "https://github.com/Hainrixz/cyber-neo",
+  "licencia": "MIT",
+  "commit": "535d0df7802ad2b8add28bde959cf954484a8449",
+  "fecha_commit": "2026-10-25T01:02:19-05:00",
+  "importado": "2026-11-03",
+  "copia": "parcial",
+  "incluye": "LICENSE y NOTICE de la raíz; de skills/cyber-neo/: los 2 scripts de escaneo y las 14 referencias.",
+  "omite": "skills/cyber-neo/SKILL.md (la puerta de seguridad usa estas piezas desde su propia skill), README.md, CLAUDE.md, assets/ y .claude-plugin/.",
+  "huellas": "sha256 del contenido con fines de línea LF",
+  "archivos": {
+    "LICENSE": {
+      "origen": "LICENSE",
+      "sha256": "119619d2b8a06f4c120afe685b1c4a9529b8123803f0e35aceac26f164224a91"
+    },
+    "NOTICE": {
+      "origen": "NOTICE",
+      "sha256": "1955cdd11ffb46bca364711f973b24afe5239e682a43b191a1bd9256e8012196"
+    },
+    "scripts/check_lockfiles.py": {
+      "origen": "skills/cyber-neo/scripts/check_lockfiles.py",
+      "sha256": "d92613412585c81b9e9bd3713c36ade0a6bdfdb7822fd06e9581825a179e33b0"
+    },
+    "scripts/scan_secrets.py": {
+      "origen": "skills/cyber-neo/scripts/scan_secrets.py",
+      "sha256": "ed288a32d2f37275fe75a8adb9ad53ef6cfb92335bf5158afa1d5fc03e0879a3",
+      "sha256_upstream": "01169d57a4b7efe3a8fc138a1905198dff29a35dbf776a9cd05efe6e061e2bd7",
+      "parches": [
+        "PATCHES/0001-redactar-secretos-en-evidence.patch",
+        "PATCHES/0002-literales-con-forma-de-llave.md"
+      ]
+    },
+    "references/auth-authz-patterns.md": {
+      "origen": "skills/cyber-neo/references/auth-authz-patterns.md",
+      "sha256": "7db373ceb6a73b3a579e5270ce4e247babccff41a319ccd82be023bae0368a99"
+    },
+    "references/cicd-security.md": {
+      "origen": "skills/cyber-neo/references/cicd-security.md",
+      "sha256": "eb18d7edabdf77b63e41e465716dc74dc459c2419feac356e2ac5f647cc41a43"
+    },
+    "references/crypto-patterns.md": {
+      "origen": "skills/cyber-neo/references/crypto-patterns.md",
+      "sha256": "1d5fbd7cbdbb03d270c898f45618a37e4c830085694e44099bea9c28c85a7da2",
+      "sha256_upstream": "c996fb346d4a5fc958cb3c76c5c1df0d39cc9d50342e5f9a671569c77c852f7d",
+      "parches": [
+        "PATCHES/0002-literales-con-forma-de-llave.md"
+      ]
+    },
+    "references/cwe-top-25.md": {
+      "origen": "skills/cyber-neo/references/cwe-top-25.md",
+      "sha256": "7976054f5dffff682e1dd2eed6346f12f5fc6cf00cfd2a7a7657d86e7f1350b3"
+    },
+    "references/error-handling-patterns.md": {
+      "origen": "skills/cyber-neo/references/error-handling-patterns.md",
+      "sha256": "78e69acd4b416683e74c633e5aaee2a38f8b740c1b5fbe2337308bdbd37d39ac"
+    },
+    "references/iac-docker.md": {
+      "origen": "skills/cyber-neo/references/iac-docker.md",
+      "sha256": "456e6c3c8e52ac4f410987fad2c858d30ec7ec185a4117bc5239d2b02f31a550"
+    },
+    "references/lang-javascript.md": {
+      "origen": "skills/cyber-neo/references/lang-javascript.md",
+      "sha256": "e12c8c6d246c1ddf6b05b0a47bf7887aa840956a00cca81fe840ea6a4be7f8ca"
+    },
+    "references/lang-python.md": {
+      "origen": "skills/cyber-neo/references/lang-python.md",
+      "sha256": "404eb39c328198741d5182406ec97dc6b934db2c3a9dc457a89eac788e2cbe9a",
+      "sha256_upstream": "780110f04fd50c49a1949b7067ca8d78d9c75c9f07b09eaba84355a758b24ad7",
+      "parches": [
+        "PATCHES/0002-literales-con-forma-de-llave.md",
+        "PATCHES/0003-ejemplo-que-dispara-antivirus.md"
+      ]
+    },
+    "references/logging-patterns.md": {
+      "origen": "skills/cyber-neo/references/logging-patterns.md",
+      "sha256": "32d0efbac7085e77db7017be445d31176bf7082be302acc6220c88814e88aca5"
+    },
+    "references/owasp-top-10.md": {
+      "origen": "skills/cyber-neo/references/owasp-top-10.md",
+      "sha256": "dc61e13a630d4223dbdb0379102b406dbff1bf31fcc2dee025f188652b369cdb"
+    },
+    "references/report-template.md": {
+      "origen": "skills/cyber-neo/references/report-template.md",
+      "sha256": "ebfbdd4a29c8d19caf67c6c22ddbe4124c69648bf3d59e20653da05d7ec03c4e"
+    },
+    "references/secrets-patterns.md": {
+      "origen": "skills/cyber-neo/references/secrets-patterns.md",
+      "sha256": "da04c756dd081178a7f30069a77b686acbd40418a8201e4899dfefba53e2106e",
+      "sha256_upstream": "5d0e38bdd50de967fa6300244d9621f08632690949c01beab2d009e1877d0ea6",
+      "parches": [
+        "PATCHES/0002-literales-con-forma-de-llave.md"
+      ]
+    },
+    "references/supply-chain.md": {
+      "origen": "skills/cyber-neo/references/supply-chain.md",
+      "sha256": "e546d2c9d2f297c773821ebd24aede53582b57ecf5e53da7f5a80dbb38f83b72"
+    },
+    "references/web-security-patterns.md": {
+      "origen": "skills/cyber-neo/references/web-security-patterns.md",
+      "sha256": "515a6c6c1157655bc4da6df886a396d77f63af98424e1d946cfb8b11dd5d1cf4"
+    }
+  },
+  "parches": [
+    {
+      "archivo": "PATCHES/0001-redactar-secretos-en-evidence.patch",
+      "aplica_a": "scripts/scan_secrets.py",
+      "motivo": "scan_secrets.py guardaba en «evidence» la línea con el secreto; el parche lo sustituye por ***REDACTED*** antes de recortar.",
+      "variantes": [
+        {
+          "commits": [
+            "535d0df7802ad2b8add28bde959cf954484a8449"
+          ],
+          "sha256_original": "01169d57a4b7efe3a8fc138a1905198dff29a35dbf776a9cd05efe6e061e2bd7",
+          "sha256_parcheado": "aae5d0647476e46505212c14acf75f65c45648f9b883e5ce507cc0f26c1ef3aa"
+        },
+        {
+          "commits": [
+            "e1a5435e9c09c25bf7b8b0d5673d32cdc2672177",
+            "9a8998a33534bca16c619f4956dd1935dc404620",
+            "dcac0a8f111954e543e1e66e02a222c0c489ca74"
+          ],
+          "sha256_original": "da706bbcad3f622655fd6b8383e37aa5fc3632b23e22e0e0a01a53281fc5d57f",
+          "sha256_parcheado": "f95e90c6a6b55b87f7489a3e8fdcfdbb32ebeb19620987726cf8e267141d227e"
+        }
+      ]
+    },
+    {
+      "archivo": "PATCHES/0002-literales-con-forma-de-llave.md",
+      "aplica_a": [
+        "references/crypto-patterns.md",
+        "references/lang-python.md",
+        "references/secrets-patterns.md",
+        "scripts/scan_secrets.py"
+      ],
+      "solo_vendor": true,
+      "motivo": "Literales con forma de llave (cabeceras PEM y la llave de ejemplo de AWS) partidos para que ninguna guarda de secretos los tome por reales; los patrones compilados de scan_secrets.py quedan idénticos."
+    },
+    {
+      "archivo": "PATCHES/0003-ejemplo-que-dispara-antivirus.md",
+      "aplica_a": [
+        "references/lang-python.md"
+      ],
+      "solo_vendor": true,
+      "motivo": "Un espacio entre «exec» y su paréntesis en un ejemplo de código vulnerable: la combinación de ese ejemplo con otro del mismo archivo hacía que un antivirus bloqueara el archivo y fallara la instalación del plugin."
+    }
+  ]
+}

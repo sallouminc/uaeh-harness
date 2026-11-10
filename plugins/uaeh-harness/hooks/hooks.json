@@ -1,0 +1,98 @@
+{
+  "description": "uaeh-harness capa 2: hooks que BLOQUEAN. PreToolUse (Bash|PowerShell): guardia-git.js niega reset --hard, push --force, --no-verify, clean -f y los intentos de quitar la guarda de git (onFailure block: si node falla, todo Bash queda bloqueado hasta reparar o desactivar el plugin); uaeh-guardia-cierre.js commit anota los commits que tocan archivos de lista blanca; solo-lectura.js es el candado de los agentes revisores y solo-navegador.js la lista blanca del verificador de navegador (browser-verifier: solo playwright-cli sin interactuar, URLs locales, git de lectura) (compuerta por identidad: cada candado solo aplica a los agentes de su clave en hooks/candados.json; en la sesión principal sale en silencio). SubagentStart/SubagentStop de los revisores: sello de integridad antes y después (uaeh-integridad.cjs; ROTA o DESCONOCIDO obligan a UNKNOWN). SubagentStop de uae-verifier|uae-security: anota que corrió un revisor. Stop: la guardia de cierre no deja cerrar sin registro de la tarea (una vez por sesión). SessionStart: linea-inicio.cjs avisa si la guarda de git no está instalada o está desactualizada. Forma exec (command + args), sin shell; los nombres de agente admiten el prefijo del plugin.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/guardia-git.js"],
+            "timeout": 10,
+            "onFailure": "block"
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/uaeh-guardia-cierre.js", "commit"],
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/solo-lectura.js"],
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/solo-navegador.js"],
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "matcher": "^(uaeh-harness:)?(uae-verifier|uae-security|browser-verifier|uae-triage|uae-architect|design-auditor)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/uaeh-integridad.cjs", "hook-inicio"],
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "^(uaeh-harness:)?(uae-verifier|uae-security|browser-verifier|uae-triage|uae-architect|design-auditor)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/uaeh-integridad.cjs", "hook-fin"],
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "^(uaeh-harness:)?(uae-verifier|uae-security)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/uaeh-guardia-cierre.js", "revisor"],
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/uaeh-guardia-cierre.js", "cierre"],
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/linea-inicio.cjs"],
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

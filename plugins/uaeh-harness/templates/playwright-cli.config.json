@@ -1,0 +1,12 @@
+{
+  "browser": {
+    "browserName": "chromium",
+    "isolated": true,
+    "launchOptions": {
+      "channel": "chrome",
+      "headless": true
+    }
+  },
+  "allowUnrestrictedFileAccess": false,
+  "codegen": "none"
+}

@@ -1,0 +1,21 @@
+# Fragmento para pegar a mano en ~/.codex/config.toml; el plugin nunca lo copia ni lo edita.
+# (Snippet to paste by hand into ~/.codex/config.toml; the plugin never copies or edits it.)
+#
+# Las dos primeras claves van ANTES de cualquier [tabla] del archivo. Si tu config.toml ya tiene [agents] o [windows],
+# añade solo la línea que falta dentro de esa tabla; no repitas el encabezado.
+
+# Codex lee el CLAUDE.md de una carpeta cuando esa carpeta no tiene AGENTS.md: así trabaja con las mismas reglas y el
+# mismo estado del proyecto que Claude Code (relevo entre motores).
+project_doc_fallback_filenames = ["CLAUDE.md"]
+
+# Tope de bytes que Codex lee de esos archivos de instrucciones. 49152 (48 KiB) cubre un CLAUDE.md típico de hasta
+# 40,000 caracteres, el límite del método.
+project_doc_max_bytes = 49152
+
+[agents]
+# Cuántos subagentes de Codex pueden correr a la vez dentro de una sesión.
+max_concurrent_threads_per_session = 4
+
+[windows]
+# Solo Windows: sandbox nativo en modo «elevated». La primera vez puede pedir permisos de administrador.
+sandbox = "elevated"

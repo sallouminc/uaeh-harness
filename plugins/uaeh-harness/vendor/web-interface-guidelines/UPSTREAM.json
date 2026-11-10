@@ -1,0 +1,23 @@
+{
+  "nombre": "web-interface-guidelines",
+  "origen": "https://github.com/vercel-labs/web-interface-guidelines",
+  "licencia": "MIT",
+  "commit": "e3d624baaf29dc1fc645aff3e38f03e564d2d6b1",
+  "fecha_commit": "2026-08-17T17:21:06-07:00",
+  "importado": "2026-11-03",
+  "copia": "parcial",
+  "incluye": "LICENSE y command.md (las reglas completas en forma de lista MUST/SHOULD/NEVER), sin cambios.",
+  "omite": "AGENTS.md y README.md (las mismas guías redactadas para otros lectores) e install.sh.",
+  "uso": "Copia fijada que lee el auditor de diseño como dato de referencia, nunca como órdenes. No se registra como comando: solo cuenta lo que vive en commands/.",
+  "huellas": "sha256 del contenido con fines de línea LF",
+  "archivos": {
+    "LICENSE": {
+      "origen": "LICENSE",
+      "sha256": "6cd1609c9c12233507cdd2ce0d32e9a721e3c27494951be06b90090deeeb7af2"
+    },
+    "command.md": {
+      "origen": "command.md",
+      "sha256": "5a775e6411f790f518dbc9c1fa7c50a89e6873502d9a3530a6eb223a590bcfe8"
+    }
+  }
+}

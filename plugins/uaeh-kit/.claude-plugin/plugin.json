@@ -1,0 +1,13 @@
+{
+  "name": "uaeh-kit",
+  "version": "1.0.0",
+  "description": "UAEH layer 1: the method's rules plus a token-efficiency kit for Claude Code (context-map injection at startup, context watchdog, CLAUDE.md diet with checker, usage measurement scripts, optional status line). Informative only: nothing blocks. / Capa 1 del método UAEH: reglas + kit de eficiencia de tokens. Solo informa.",
+  "author": {
+    "name": "Salloum Inc",
+    "url": "https://github.com/sallouminc"
+  },
+  "homepage": "https://github.com/sallouminc/uaeh-harness",
+  "repository": "https://github.com/sallouminc/uaeh-harness",
+  "license": "MIT",
+  "keywords": ["uaeh", "tokens", "context", "efficiency", "method", "statusline"]
+}

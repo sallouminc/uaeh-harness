@@ -1,0 +1,20 @@
+# Fin de línea uniforme: LF en todo lo que ejecuta una shell o Node.
+* text=auto eol=lf
+*.cjs   text eol=lf
+*.js    text eol=lf
+*.mjs   text eol=lf
+*.json  text eol=lf
+*.md    text eol=lf
+*.toml  text eol=lf
+*.yml   text eol=lf
+*.sh    text eol=lf
+plugins/*/git-hooks/* text eol=lf
+plugins/*/wsl/bin/*   text eol=lf
+# Scripts nativos de Windows conservan CRLF.
+*.cmd   text eol=crlf
+*.ps1   text eol=crlf
+# Binarios.
+*.png   binary
+*.jpg   binary
+*.pdf   binary
+*.pptx  binary

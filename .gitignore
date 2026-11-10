@@ -1,0 +1,42 @@
+# Dependencias y cachés
+node_modules/
+coverage/
+.uaeh/
+__pycache__/
+*.pyc
+
+# Registros, respaldos y temporales
+*.log
+*.bak
+*.bak.*
+*.tmp
+*.orig
+
+# Secretos y configuración local: NUNCA al repo
+tools/lista-negra.local.txt
+.env
+.env.*
+*.pem
+*.key
+settings.local.json
+.credentials.json
+
+# Datos de ejecución del arnés (registro, sello, sesiones, corridas)
+uaeh/
+*.jsonl
+sesiones/
+integridad/
+reports/
+runs/
+
+# Fixture visual: se instala con npm ci en UAEH_HOME/cache, no aquí
+plugins/uaeh-harness/skills/uae-visual/pruebas/node_modules/
+
+# Residuos del instalador, del doctor y de las pruebas
+*.uaeh-respaldo-*
+*.uaeh-propuesto.json
+tests/fixtures/.tmp-*/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
