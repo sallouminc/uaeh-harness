@@ -43,7 +43,7 @@ The log is mandatory for the harness: see [arnes.md](arnes.md).
 
 ## Reproducing the evidence table
 
-The table in `README.es.md` (section «Evidencia», "Evidence") compares, over 1,213 real transcripts from one account, the ten days before the method (October 5 to 14, 2026) with the fifteen after (October 16 to 30, 2026). It is the author's real usage.
+The table in `README.md` (section "Evidence") compares, over 1,213 real transcripts from one account, the ten days before the method (October 5 to 14, 2026) with the fifteen after (October 16 to 30, 2026). It is the author's real usage.
 
 | Table metric | Before | After | Change | Related script |
 |---|---|---|---|---|

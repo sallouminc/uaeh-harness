@@ -2,7 +2,7 @@
 
 **[Leer en español → README.es.md](README.es.md)**
 
-> **Status: version 1.0 in preparation.** All three layers are built and in daily use by their author. What remains before 1.0 is the last round of installation checks and an independent review of the repository. This README describes what the repository contains and the evidence behind it; the full documentation is in [`docs/en/`](docs/en/README.md).
+> **Status: version 1.0 published.** All three layers are built and in daily use by their author. Changes by version are in [`CHANGELOG.md`](CHANGELOG.md). This README describes what the repository contains and the evidence behind it; the full documentation is in [`docs/en/`](docs/en/README.md).
 
 UAEH is a **working method for coding with AI agents** (Claude Code first, Codex as an optional second engine), packaged as **Claude Code plugins**. It grew out of one practical problem: an account whose spend was going almost entirely to *re-reading* context, and a review process that could report "done" without proof.
 
