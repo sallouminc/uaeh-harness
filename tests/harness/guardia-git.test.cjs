@@ -135,6 +135,21 @@ caso('push --force-with-lease=ref', true, 'git push --force-with-lease=main:abc 
 caso('push --force-if-includes', true, 'git push --force-if-includes', limpio);
 caso('push origin main', false, 'git push origin main', limpio);
 caso('push -u origin main', false, 'git push -u origin main', limpio);
+// push forzado sin la palabra «force»: espejo y «+» por configuración (revisión independiente del 11-nov)
+caso('pushforzado: push --mirror', true, 'git push --mirror origin', limpio);
+caso('pushforzado: push --mir (prefijo)', true, 'git push --mir origin', limpio);
+caso('pushforzado: -c remote.origin.push=+…', true, 'git -c remote.origin.push=+HEAD:refs/heads/main push origin', limpio);
+caso('pushforzado: -c remote.origin.mirror=true', true, 'git -c remote.origin.mirror=true push origin', limpio);
+caso('pushforzado: -c remote.origin.mirror (sin valor)', true, 'git -c remote.origin.mirror push origin', limpio);
+caso('pushforzado: config remote.origin.push +…', true, 'git config remote.origin.push +HEAD:refs/heads/main', limpio);
+caso('pushforzado: config --add remote.origin.push "+…"', true, 'git config --add remote.origin.push "+refs/heads/*:refs/heads/*"', limpio);
+caso('pushforzado: config remote.origin.mirror true', true, 'git config remote.origin.mirror true', limpio);
+caso('pushforzado: -c remote.origin.push sin «+» se permite', false, 'git -c remote.origin.push=HEAD:refs/heads/x push origin', limpio);
+caso('pushforzado: -c remote.origin.mirror=false se permite', false, 'git -c remote.origin.mirror=false push origin', limpio);
+caso('pushforzado: config remote.origin.push sin «+» se permite', false, 'git config remote.origin.push HEAD:refs/heads/x', limpio);
+caso('pushforzado: leer remote.origin.push se permite', false, 'git config --get remote.origin.push', limpio);
+caso('pushforzado: fetch con «+» en la configuración no es push', false, 'git -c remote.origin.fetch=+refs/heads/*:refs/remotes/origin/* fetch origin', limpio);
+caso('pushforzado: borrar una rama remota se permite (residual declarado)', false, 'git push origin --delete rama-vieja', limpio);
 caso('commit --no-verify', true, 'git commit --no-verify -m x', limpio);
 caso('push --no-verify', true, 'git push --no-verify', limpio);
 caso('commit -n -m x', true, 'git commit -n -m x', limpio);

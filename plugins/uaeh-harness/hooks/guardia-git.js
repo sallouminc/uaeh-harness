@@ -3,7 +3,11 @@
 //
 // Niega lo que destruye trabajo o salta controles:
 //   1. git reset --hard
-//   2. git push --force / -f / --force-with-lease / --force-if-includes / +refspec
+//   2. git push --force / -f / --force-with-lease / --force-if-includes / +refspec / --mirror, y el push forzado por
+//      configuración (-c remote.<x>.push=+… o remote.<x>.mirror, y `git config` que los deja escritos).
+//      RESIDUAL: borrar una rama remota (`push --delete`, `push origin :rama`) NO se niega (es limpieza normal de ramas
+//      ya unidas); tampoco `git remote add --mirror=push` ni un refspec con «+» escrito en .git/config con herramientas
+//      de archivo o por --config-env.
 //   3. --no-verify en cualquier git, y git commit -n
 //   4. git clean -f / --force
 // Y en `git commit` (solo ahí) revisa lo que se va a commitear:
@@ -881,10 +885,32 @@ function configEscribeGuarda(rest) {
   return idx >= 0 && pos.length > idx + 1; // `git config core.hooksPath <valor>`
 }
 
+// Push forzado por configuración: un refspec de push con «+» o un remoto espejo (mirror sin valor = true).
+const CFG_PUSH_FORZADO = /^remote\..*\.(?:push\s*=\s*['"]?\+|mirror\s*(?:$|=\s*['"]?(?:true|yes|on|1)\b))/i;
+
+// `git config [--add|set…] remote.<x>.push +<refspec>` o `remote.<x>.mirror true`. Lecturas y borrados pasan.
+function configEscribePushForzado(rest) {
+  const toks = rest.map((x) => String(x).replace(/^['"]|['"]$/g, ''));
+  if (toks.some((a) => /^(?:--get|--get-all|--get-regexp|--get-urlmatch|--list|-l|--unset|--unset-all)$/.test(a))) return false;
+  const pos = [];
+  for (let j = 0; j < toks.length; j++) {
+    const a = toks[j];
+    if (/^(?:--file|-f|--type|--default)$/.test(a)) { j++; continue; }
+    if (a.startsWith('-')) continue;
+    pos.push(a);
+  }
+  for (let j = 0; j < pos.length - 1; j++) {
+    if (/^remote\..*\.push$/i.test(pos[j]) && pos[j + 1].startsWith('+')) return true;
+    if (/^remote\..*\.mirror$/i.test(pos[j]) && /^(?:true|yes|on|1)$/i.test(pos[j + 1])) return true;
+  }
+  return false;
+}
+
 function analizarGit(args, estado, completo) {
   let dir = estado.dir;
   let dudosa = !!estado.dirDudosa;
   let redirigido = !!estado.redirLocal; // env -C / sudo -D… delante de git (B8)
+  let pushForzadoCfg = false; // -c remote.<x>.push=+… / -c remote.<x>.mirror=true
   let i = 0;
   while (i < args.length && args[i].startsWith('-')) {
     const a = args[i];
@@ -907,6 +933,7 @@ function analizarGit(args, estado, completo) {
     {
       const cfg = a === '-c' ? String(args[i + 1] === undefined ? '' : args[i + 1]) : /^-c./.test(a) ? a.slice(2) : '';
       if (CFG_REDIRIGE.test(cfg.trim())) redirigido = true;
+      if (CFG_PUSH_FORZADO.test(cfg.trim())) pushForzadoCfg = true;
     }
     if (OPT_GLOBAL_CON_ARG.has(a)) { i += 2; continue; }
     i++;
@@ -931,6 +958,13 @@ function analizarGit(args, estado, completo) {
       return MOTIVO_PROHIBIDO('git push --force');
     }
     if (f.pos.some((p) => p.startsWith('+'))) return MOTIVO_PROHIBIDO('git push +refspec (push forzado)');
+    // --mirror fuerza TODAS las referencias y borra en el remoto las que no existen aquí (prefijos desde --mi)
+    if (f.largas.some((l) => esPrefijo(l, '--mirror', 4))) return MOTIVO_PROHIBIDO('git push --mirror (fuerza todas las referencias y borra las que faltan)');
+    if (pushForzadoCfg) return MOTIVO_PROHIBIDO('git -c remote.<x>.push=+… / remote.<x>.mirror (push forzado por configuración)');
+  }
+  // 2b. dejar escrito el push forzado en la configuración: el `git push` siguiente ya no lo delata
+  if (sub === 'config' && configEscribePushForzado(args.slice(i + 1))) {
+    return MOTIVO_PROHIBIDO('git config remote.<x>.push +… / remote.<x>.mirror true (deja configurado un push forzado)');
   }
   // R3-2: add/commit con la lista de rutas en un archivo: el guardia no ve qué se stagea → prohibido
   // (cualquier prefijo que git acepte; «--pathspec-» a secas es ambiguo y git lo rechaza solo).
