@@ -9,8 +9,10 @@
 // y además se corre el doctor del kit contra ese perfil para ver `inyeccion` en OK.
 //
 // Cuesta una llamada al modelo (modelo económico por defecto) y necesita sesión iniciada: copia SOLO el
-// archivo de credenciales al perfil temporal y lo borra al terminar (si el proceso se mata de golpe, la copia queda en
-// la carpeta temporal uaeh-perfil-limpio-*: borrarla a mano). No es una prueba
+// archivo de credenciales al perfil temporal y lo borra en cuanto `claude` termina. Si la corrida se corta (Ctrl+C,
+// cierre de la consola, kill), la limpieza corre igual; si se mata sin aviso (kill -9, taskkill /F), la siguiente
+// corrida borra al arrancar las carpetas uaeh-perfil-limpio-* de más de una hora (en --base y en la carpeta temporal):
+// siempre la copia de credenciales, y la carpeta entera salvo que se haya creado con --conservar. No es una prueba
 // unitaria: se corre a mano o en el cierre de un bloque. Uso:
 //   node tools/probar-perfil-limpio.cjs [--modelo haiku] [--conservar] [--json] [--desde-github [<origen>]] [--base <carpeta>]
 //
@@ -37,6 +39,40 @@ const CENTINELA = 'CENTINELA-7731';
 const ORIGEN_GITHUB = 'sallouminc/uaeh-harness';
 const MARKETPLACE = 'uaeh';
 const PLUGINS = ['uaeh-kit', 'uaeh-harness'];
+const PREFIJO = 'uaeh-perfil-limpio-';
+const MARCA_CONSERVAR = '.conservar';
+const UNA_HORA = 60 * 60 * 1000;
+
+// Restos de corridas cortadas sin aviso: en cada carpeta de `dirs`, las subcarpetas PREFIJO* (reales, no enlaces) con más
+// de `edadMinMs` sin cambios. Borra siempre su copia de credenciales y, si no llevan la marca de --conservar, la carpeta
+// entera. La edad mínima protege una corrida que esté en curso en otra terminal. Nunca lanza: lo que no puede borrar
+// (p. ej. un antivirus que lo bloquea) va a `errores`.
+function limpiarRestos(dirs, { ahora = Date.now(), edadMinMs = UNA_HORA } = {}) {
+  const res = { credenciales: [], carpetas: [], errores: [] };
+  const vistos = new Set();
+  for (const dir of dirs) {
+    const clave = process.platform === 'win32' ? path.resolve(dir).toLowerCase() : path.resolve(dir);
+    if (vistos.has(clave)) continue;
+    vistos.add(clave);
+    let entradas;
+    try { entradas = fs.readdirSync(dir, { withFileTypes: true }); } catch { continue; }
+    for (const e of entradas) {
+      if (!e.isDirectory() || !e.name.startsWith(PREFIJO)) continue;
+      const p = path.join(dir, e.name);
+      try {
+        if (ahora - fs.lstatSync(p).mtimeMs < edadMinMs) continue;
+        const cred = path.join(p, 'claude', '.credentials.json');
+        let hayCred = false;
+        try { fs.lstatSync(cred); hayCred = true; } catch { /* no hay copia */ }
+        if (hayCred) { fs.rmSync(cred, { force: true }); res.credenciales.push(cred); }
+        if (!fs.existsSync(path.join(p, MARCA_CONSERVAR))) { fs.rmSync(p, { recursive: true, force: true }); res.carpetas.push(p); }
+      } catch (err) {
+        res.errores.push(`${p}: ${err.code || err.message}`);
+      }
+    }
+  }
+  return res;
+}
 
 function claudeHomeReal() {
   const d = process.env.CLAUDE_CONFIG_DIR;
@@ -84,14 +120,38 @@ function main(argv) {
   const informe = { pasos: [], veredicto: 'FAIL' };
   const paso = (nombre, ok, detalle) => { informe.pasos.push({ nombre, ok, detalle }); if (!o.json) console.log(`${ok ? 'OK   ' : 'FALLÓ'}  ${nombre}${detalle ? ' — ' + detalle : ''}`); };
 
+  const restos = limpiarRestos([o.base, os.tmpdir()]);
+  if (restos.credenciales.length || restos.carpetas.length || restos.errores.length) {
+    informe.restos = restos;
+    if (!o.json) {
+      console.log(`restos de corridas anteriores: ${restos.credenciales.length} copia(s) de credenciales y ${restos.carpetas.length} carpeta(s) borradas`);
+      for (const e of restos.errores) console.log(`AVISO  no se pudo limpiar ${e} (bórralo a mano)`);
+    }
+  }
+
   const cred = path.join(claudeHomeReal(), '.credentials.json');
   if (!fs.existsSync(cred)) { console.error('No hay .credentials.json en el perfil real: inicia sesión en Claude Code antes de correr esta prueba.'); return 2; }
 
-  const base = fs.mkdtempSync(path.join(o.base, 'uaeh-perfil-limpio-'));
+  const base = fs.mkdtempSync(path.join(o.base, PREFIJO));
   const perfil = path.join(base, 'claude');
   const proyecto = path.join(base, 'proyecto-demo');
   const credTemp = path.join(perfil, '.credentials.json');
+  // La copia de credenciales no puede sobrevivir a la corrida. Con un manejador de señal, Ctrl+C (o el cierre de la
+  // consola) ya no mata Node a media espera de `claude`: la ejecución sigue hasta el finally, y el manejador limpia y sale.
+  const borrarCredenciales = () => { try { fs.rmSync(credTemp, { force: true }); } catch { /* lo recoge limpiarRestos */ } };
+  let limpio = false;
+  const limpiar = () => {
+    if (limpio) return;
+    limpio = true;
+    borrarCredenciales();
+    if (!o.conservar) { try { fs.rmSync(base, { recursive: true, force: true }); } catch { /* lo recoge limpiarRestos */ } }
+  };
+  const CODIGOS = { SIGINT: 130, SIGTERM: 143, SIGHUP: 129 };
+  const alSenal = (senal) => { limpiar(); process.exit(CODIGOS[senal] || 1); };
+  for (const s of Object.keys(CODIGOS)) process.on(s, alSenal);
+  process.on('exit', limpiar);
   try {
+    if (o.conservar) fs.writeFileSync(path.join(base, MARCA_CONSERVAR), 'creada con --conservar: limpiarRestos solo le quita la copia de credenciales\n');
     fs.mkdirSync(perfil, { recursive: true });
     fs.mkdirSync(path.join(proyecto, 'tasks'), { recursive: true });
     fs.copyFileSync(cred, credTemp);
@@ -131,6 +191,7 @@ function main(argv) {
     const args = o.github ? ['-p', '--model', o.modelo, '--output-format', 'json'] : ['-p', '--plugin-dir', KIT, '--model', o.modelo, '--output-format', 'json'];
     const inicio = Date.now();
     const r = spawnSync('claude', args, { cwd: proyecto, env, encoding: 'utf8', input: prompt, shell: process.platform === 'win32', timeout: 180000, maxBuffer: 16 * 1024 * 1024 });
+    borrarCredenciales(); // último uso de `claude`: el doctor no las necesita
     const seg = ((Date.now() - inicio) / 1000).toFixed(1);
     if (r.error || r.status !== 0) {
       paso('claude -p en perfil limpio', false, `estado ${r.status} (${seg} s): ${(r.stderr || r.stdout || String(r.error)).trim().slice(0, 600)}`);
@@ -161,8 +222,9 @@ function main(argv) {
     informe.veredicto = informe.pasos.every((p) => p.ok) ? 'PASS' : 'FAIL';
     informe.perfil = o.conservar ? perfil : null;
   } finally {
-    try { fs.rmSync(credTemp, { force: true }); } catch { /* nada */ }
-    if (!o.conservar) { try { fs.rmSync(base, { recursive: true, force: true }); } catch { /* nada */ } }
+    limpiar();
+    for (const s of Object.keys(CODIGOS)) process.removeListener(s, alSenal);
+    process.removeListener('exit', limpiar);
   }
   if (o.json) console.log(JSON.stringify(informe, null, 2));
   else console.log(`\nprobar-perfil-limpio: ${informe.veredicto}${informe.perfil ? ` (perfil conservado sin credenciales en ${informe.perfil})` : ''}`);
@@ -170,4 +232,4 @@ function main(argv) {
 }
 
 if (require.main === module) process.exit(main(process.argv.slice(2)));
-module.exports = { buscarEnTranscripts, MARCA, CENTINELA, ORIGEN_GITHUB };
+module.exports = { buscarEnTranscripts, limpiarRestos, MARCA, CENTINELA, ORIGEN_GITHUB, PREFIJO, MARCA_CONSERVAR };
