@@ -1,6 +1,6 @@
 {
   "name": "uaeh-kit",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "UAEH layer 1: the method's rules plus a token-efficiency kit for Claude Code (context-map injection at startup, context watchdog, CLAUDE.md diet with checker, usage measurement scripts, optional status line). Informative only: nothing blocks. / Capa 1 del método UAEH: reglas + kit de eficiencia de tokens. Solo informa.",
   "author": {
     "name": "Salloum Inc",

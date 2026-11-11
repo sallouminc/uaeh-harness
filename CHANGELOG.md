@@ -6,6 +6,22 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).\
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y este proyecto se rige por el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.0.1] - 2026-11-11
+
+### Fixed / Corregido
+
+- `uaeh-kit` 1.0.1: `instalar.cjs statusline --quitar` with a `settings.json` that is not valid JSON now stops with an error and touches nothing. It used to delete the status-line mirror anyway, leaving a kit `statusLine` pointing to a file that no longer existed.\
+  `uaeh-kit` 1.0.1: `instalar.cjs statusline --quitar` con un `settings.json` que no es JSON válido ahora se detiene con un error y no toca nada. Antes borraba igual el espejo de la barra y dejaba una `statusLine` del kit apuntando a un archivo que ya no existía.
+- `uaeh-harness` 1.0.1, layer 3: `wsl/instalar.sh` no longer overwrites a `/usr/local/bin/semgrep` of another version that UAEH did not install (`pipx install --force` replaced it silently). The pre-install checks (also run by `--comprobar`) now stop before anything is installed and say how to proceed; `UAEH_SEMGREP_REEMPLAZAR=1` replaces it on purpose. The installer container test plants a foreign semgrep and checks it stays byte-identical.\
+  `uaeh-harness` 1.0.1, capa 3: `wsl/instalar.sh` ya no pisa un `/usr/local/bin/semgrep` de otra versión que no instaló UAEH (`pipx install --force` lo reemplazaba sin avisar). Las comprobaciones previas (también con `--comprobar`) se detienen antes de instalar nada y dicen cómo seguir; `UAEH_SEMGREP_REEMPLAZAR=1` lo reemplaza a propósito. La prueba de los instaladores en contenedor siembra un semgrep ajeno y comprueba que queda idéntico.
+- Repository tool `tools/probar-perfil-limpio.cjs`: the copy of the Claude Code credentials file no longer outlives the run. It is deleted as soon as `claude` finishes; an interrupted run (Ctrl+C, console closed, `kill`) cleans up before exiting; and each run first removes copies left in `uaeh-perfil-limpio-*` folders older than one hour by runs killed without notice (the whole folder unless it was created with `--conservar`). New tests in `tests/tools/probar-perfil-limpio.test.cjs`, including a real SIGINT on Linux.\
+  Herramienta del repositorio `tools/probar-perfil-limpio.cjs`: la copia del archivo de credenciales de Claude Code ya no sobrevive a la corrida. Se borra en cuanto `claude` termina; una corrida cortada (Ctrl+C, consola cerrada, `kill`) limpia antes de salir; y cada corrida borra primero las copias que dejaron, en carpetas `uaeh-perfil-limpio-*` de más de una hora, las corridas matadas sin aviso (la carpeta entera salvo que se haya creado con `--conservar`). Pruebas nuevas en `tests/tools/probar-perfil-limpio.test.cjs`, con un SIGINT real en Linux.
+
+### Changed / Cambiado
+
+- `uae-security` and `uae-preflight` skills: the platform line no longer says Linux is untested. The layer-3 sandbox runs natively in CI on Ubuntu 24.04 (`linux-integracion`, `instaladores-contenedor`), and the preflight fingerprint, seal and verification templates are tested in CI on Windows and Linux, as the platform page already said.\
+  Skills `uae-security` y `uae-preflight`: la línea de plataformas ya no dice que Linux esté sin probar. La caja de arena de la capa 3 corre de forma nativa en la CI de Ubuntu 24.04 (`linux-integracion`, `instaladores-contenedor`), y la huella, el sello y las plantillas de verificación del preflight se prueban en la CI de Windows y de Linux, como ya decía la página de plataformas.
+
 ## [1.0.0] - 2026-11-10
 
 ### Added / Añadido
