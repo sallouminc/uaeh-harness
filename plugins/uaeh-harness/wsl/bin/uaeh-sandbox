@@ -166,6 +166,8 @@ principal(){
     # ÚNICA etapa con red: solo baja dependencias del lockfile, con --ignore-scripts (no corre código del
     # proyecto). Resultado: volumen uaeh-deps-<repo>-<hash del lockfile> con /deps/app listo.
     # pnpm carga .pnpmfile.cjs del repo aunque haya --ignore-scripts: por eso --ignore-pnpmfile.
+    # El .npmrc del repo puede nombrar el programa «git» que npm lanza para una dependencia por git (--ignore-scripts
+    # no lo cubre): por eso npm_config_git=git (la variable de entorno gana al .npmrc del proyecto).
     case "$GESTOR" in
       npm)  LOCK=package-lock.json; INST='npm ci --ignore-scripts --no-audit --no-fund' ;;
       pnpm) LOCK=pnpm-lock.yaml;    INST='corepack pnpm install --frozen-lockfile --ignore-scripts --ignore-pnpmfile' ;;
@@ -182,7 +184,7 @@ principal(){
         --tmpfs /tmp:rw,exec,nosuid,nodev,size=2048m \
         --mount "type=bind,src=$FUENTE,dst=/src,readonly" \
         --mount "type=volume,src=$VOL,dst=/deps" \
-        -e HOME=/tmp/home -e npm_config_cache=/tmp/npm -e COREPACK_HOME=/tmp/corepack \
+        -e HOME=/tmp/home -e npm_config_cache=/tmp/npm -e npm_config_git=git -e COREPACK_HOME=/tmp/corepack \
         -e COREPACK_ENABLE_DOWNLOAD_PROMPT=0 -e CI=1 -w /deps \
         "$IMG" sh -c "mkdir -p /deps/app /tmp/home && cp -a --no-preserve=ownership /src/. /deps/app/ && cd /deps/app && $INST" >&2; then
       "$DOCKER" volume rm "$VOL" >/dev/null 2>&1 || true
@@ -230,9 +232,18 @@ principal(){
       ENVS+=(-e "DATABASE_URL=postgresql://uaeh:uaeh-ficticia@127.0.0.1:5432/uaeh")
     fi
     # Vigía de disco: /scratch es lo único que escribe en el disco del anfitrión.
-    ( while sleep 2; do
-        mb=$(du -sm "$SCRATCH" 2>/dev/null | cut -f1 || echo 0)
-        if [ "${mb:-0}" -gt "$SCRATCH_MAX_MB" ]; then
+    # Falla cerrado: si `du` no puede medir (una carpeta sin permiso de lectura creada desde dentro lo deja ciego) o
+    # su salida no es un número, el contenedor se detiene igual que si hubiera pasado el tope.
+    ( set +e +o pipefail
+      while sleep 2; do
+        [ -d "$SCRATCH" ] || exit 0
+        mb=$(du -sm "$SCRATCH" 2>/dev/null); ciego=$?
+        mb=${mb%%[!0-9]*}
+        if [ "$ciego" -ne 0 ] || [ -z "$mb" ]; then
+          echo "uaeh-sandbox: no se pudo medir scratch (¿carpeta sin permiso de lectura?), se detiene" >&2
+          "$DOCKER" kill "$NOMBRE" >/dev/null 2>&1; exit 0
+        fi
+        if [ "$mb" -gt "$SCRATCH_MAX_MB" ]; then
           echo "uaeh-sandbox: scratch pasó de $SCRATCH_MAX_MB MB, se detiene" >&2
           "$DOCKER" kill "$NOMBRE" >/dev/null 2>&1; exit 0
         fi
@@ -248,7 +259,7 @@ principal(){
       -w /work "$IMG" \
       timeout --kill-after=5 "$SEG" sh -c 'mkdir -p "$HOME" && exec "$@"' sh "${CMD[@]}"
     RC=$?; set -e
-    echo "uaeh-sandbox: fin código=$RC duración=$(( $(date +%s) - T0 ))s scratch=$(du -sm "$SCRATCH" | cut -f1)MB" >&2
+    echo "uaeh-sandbox: fin código=$RC duración=$(( $(date +%s) - T0 ))s scratch=$(du -sm "$SCRATCH" 2>/dev/null | cut -f1 || true)MB" >&2
     exit "$RC" ;;
   esac
 }

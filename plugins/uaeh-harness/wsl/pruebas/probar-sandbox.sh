@@ -119,5 +119,19 @@ if [ "${PROBAR_DISCO:-0}" = 1 ]; then
   { ! grep -q TERMINO /tmp/uaeh-disco && [ "${t:-0}" -gt 0 ]; } && ok "vigía de disco detuvo (${t} MB al parar)" || no "vigía de disco (${t} MB; $(tail -n 1 /tmp/uaeh-disco))"
 fi
 
+echo "== vigía de disco: no se deja cegar"
+# Una carpeta sin permiso de lectura dentro de /scratch hace fallar a `du`: el vigía debe detener el contenedor
+# (falla cerrado), no seguir sin medir. Escribe unos KB; no necesita PROBAR_DISCO.
+sb --segundos 60 -- sh -c 'mkdir /scratch/ciega && chmod 000 /scratch/ciega; sleep 20; echo TERMINO' > /tmp/uaeh-ciego 2>&1
+CIEGA="$RUN/agents/t01/scratch/ciega"; ciega_real=0
+{ [ -d "$CIEGA" ] && ! ls "$CIEGA" >/dev/null 2>&1; } && ciega_real=1
+chmod 700 "$CIEGA" 2>/dev/null; rmdir "$CIEGA" 2>/dev/null
+if [ "$ciega_real" = 0 ]; then
+  # Sistema de archivos sin permisos reales (drvfs de WSL sin metadatos): chmod 000 no ciega a nadie, no hay nada que probar.
+  grep -q TERMINO /tmp/uaeh-ciego && ok "vigía ciego: no aplica aquí (el sistema de archivos no aplica chmod; el contenedor terminó normal)" || no "vigía ciego: el contenedor no terminó ($(tail -n 1 /tmp/uaeh-sb-err))"
+else
+  { ! grep -q TERMINO /tmp/uaeh-ciego && grep -q "no se pudo medir scratch" /tmp/uaeh-sb-err; } && ok "vigía ciego: detuvo el contenedor" || no "vigía ciego: no detuvo ($(tail -n 1 /tmp/uaeh-ciego); $(tail -n 1 /tmp/uaeh-sb-err))"
+fi
+
 echo "RESUMEN pass=$PASS fail=$FAIL"
 [ "$FAIL" = 0 ]
