@@ -6,6 +6,27 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).\
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y este proyecto se rige por el [Versionado Semántico](https://semver.org/lang/es/).
 
+## [1.0.2] - 2026-11-11
+
+Fixes from an independent review of the parts nobody independent had read yet (text guard, commit guard, git hooks, integrity seal, layer-3 programs, English docs). `uaeh-kit` stays at 1.0.1.\
+Correcciones de una revisión independiente de lo que nadie independiente había leído (guarda de texto, guarda de commits, hooks de git, sello de integridad, programas de la capa 3, documentación en inglés). `uaeh-kit` sigue en 1.0.1.
+
+### Security / Seguridad
+
+- `uaeh-harness` 1.0.2, text guard (`guardia-git.js`): a forced push that does not say "force" is now denied too: `git push --mirror` (and its prefixes), `-c remote.<x>.push=+…`, `-c remote.<x>.mirror` and a `git config` that writes either of them. Deleting a remote branch (`push --delete`, `push origin :branch`) is still allowed and is now a declared limit.\
+  `uaeh-harness` 1.0.2, guarda de texto (`guardia-git.js`): ahora también se niega el push forzado que no dice «force»: `git push --mirror` (y sus prefijos), `-c remote.<x>.push=+…`, `-c remote.<x>.mirror` y un `git config` que deje escrito cualquiera de los dos. Borrar una rama remota (`push --delete`, `push origin :rama`) sigue permitido y queda como límite declarado.
+- Layer 3, `uaeh-sandbox preparar-deps`: the audited repository's `.npmrc` could name the `git` program npm launches for a git dependency, which `--ignore-scripts` does not cover, so repository code could run in the only stage with network. The stage now sets `npm_config_git=git` (the environment wins over the project `.npmrc`). Regression in `wsl/pruebas/probar-pnpmfile.sh`, with a negative control.\
+  Capa 3, `uaeh-sandbox preparar-deps`: el `.npmrc` del repositorio auditado podía nombrar el programa `git` que npm lanza para una dependencia por git, algo que `--ignore-scripts` no cubre: código del repositorio podía correr en la única etapa con red. La etapa ahora fija `npm_config_git=git` (el entorno gana al `.npmrc` del proyecto). Regresión en `wsl/pruebas/probar-pnpmfile.sh`, con control negativo.
+- Layer 3, `uaeh-sandbox ejecutar`: the disk watcher of `/scratch` now fails closed. Code inside the sandbox could blind it with a folder without read permission (`du` failed and the 1 GB limit was never applied); if the size cannot be measured, the container is stopped. Regression in `wsl/pruebas/probar-sandbox.sh`.\
+  Capa 3, `uaeh-sandbox ejecutar`: el vigía de disco de `/scratch` ahora falla cerrado. El código de dentro podía cegarlo con una carpeta sin permiso de lectura (`du` fallaba y el tope de 1 GB no se aplicaba nunca); si el tamaño no se puede medir, el contenedor se detiene. Regresión en `wsl/pruebas/probar-sandbox.sh`.
+- Integrity seal (`uaeh-integridad.cjs`): the exception for new evidence files (`test-results/`, `playwright-report/`…) no longer applies under `.claude/` or `.codex/`, where a new `.md` is a skill or a command the agent loads later. The header now declares the limits the review found (approved permissions, harness policy outside the mirror, git references, non-UTF-8 names, shared fallback folder).\
+  Sello de integridad (`uaeh-integridad.cjs`): la excepción de evidencias nuevas (`test-results/`, `playwright-report/`…) ya no aplica bajo `.claude/` ni `.codex/`, donde un `.md` nuevo es una skill o un comando que el agente carga después. El encabezado declara ahora los límites que halló la revisión (permisos aprobados, política del arnés fuera del espejo, referencias de git, nombres que no son UTF-8, carpeta de respaldo compartida).
+
+### Fixed / Corregido
+
+- English docs: `medicion.md` pointed to the Spanish README; `visual.md` listed the eight `DESIGN.md` sections as seven; wording of the OSV.dev row in `privacidad.md`. Both READMEs no longer say version 1.0 is "in preparation".\
+  Documentación en inglés: `medicion.md` remitía al README en español; `visual.md` listaba como siete las ocho secciones de `DESIGN.md`; redacción de la fila de OSV.dev en `privacidad.md`. Los dos README ya no dicen que la versión 1.0 está «en preparación».
+
 ## [1.0.1] - 2026-11-11
 
 ### Fixed / Corregido

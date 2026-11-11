@@ -25,7 +25,7 @@
       "name": "uaeh-harness",
       "source": "./plugins/uaeh-harness",
       "description": "Layers 2 and 3: verification harness (independent verifier and security reviewer with a read-only lock, integrity seal, task ledger, closing guard, two-layer git guard), the uae-security gate (scanners, Codex second opinion, no-network sandbox on a pinned Linux engine) the on-demand uae-visual gate (Playwright + axe checks, browser verifier, design auditor) and the on-demand uae-preflight (launch documents sealed with a risk-based validity). Hooks that block. / Capas 2 y 3: arnés de verificación, puerta de seguridad, auditoría visual y preflight bajo pedido; hooks que bloquean.",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "author": { "name": "Salloum Inc" },
       "license": "MIT",
       "category": "development",
