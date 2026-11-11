@@ -23,7 +23,7 @@ Lo que la puerta de seguridad (`uae-security`) necesita del lado de Linux: los e
 
 En Linux directo: los mismos pasos con `sudo bash …/instalar.sh` y `sudo env UAEH_BASE=… bash …/instalar-bin.sh` (el usuario sale de `SUDO_USER`).
 
-**Variables de `instalar.sh`:** `UAEH_USER` · `UAEH_SKIP_DOCKER=1` (usa el Docker que ya hay) · `UAEH_SOLO_ESCANERES=1` (sin Docker ni imágenes) · `UAEH_REGLAS_NUEVAS=1` (vuelve a bajar las reglas de semgrep) · `UAEH_TZ` (zona del sello).
+**Variables de `instalar.sh`:** `UAEH_USER` · `UAEH_SKIP_DOCKER=1` (usa el Docker que ya hay) · `UAEH_SOLO_ESCANERES=1` (sin Docker ni imágenes) · `UAEH_REGLAS_NUEVAS=1` (vuelve a bajar las reglas de semgrep) · `UAEH_SEMGREP_REEMPLAZAR=1` (reemplaza un `/usr/local/bin/semgrep` de otra versión que no instaló UAEH; sin ella, el instalador se detiene antes de empezar y no lo toca) · `UAEH_TZ` (zona del sello).
 
 **Reglas de `UAEH_BASE`:** ruta absoluta con solo `A-Z a-z 0-9 . _ - /`; sin `.`, `..`, `//` ni `/` final; 3 niveles o más; bajo `/mnt/…`, `/srv/…` o `/home/<UAEH_USER>/…`. La caja de arena compara la ruta de cada corrida con la base **literalmente** (nunca como expresión regular).
 

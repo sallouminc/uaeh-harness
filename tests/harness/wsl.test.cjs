@@ -183,6 +183,19 @@ test('instalar.sh · instala con la casa de root: fija HOME y quita las XDG_* de
   assert.match(fs.readFileSync(path.join(RAIZ_REPO, 'tools', 'contenedor', 'verificar-instaladores.sh'), 'utf8'), /archivos de root en la casa del usuario/);
 });
 
+test('instalar.sh · un semgrep que no instaló UAEH se revisa antes de instalar nada y solo se reemplaza con UAEH_SEMGREP_REEMPLAZAR=1', () => {
+  // pipx install --force pisaba cualquier /usr/local/bin/semgrep de otra versión. revisar() corre antes del primer paso
+  // (una FALLA ahí detiene todo) y también en --comprobar. El comportamiento real: tools/contenedor/verificar-instaladores.sh.
+  const s = fs.readFileSync(INSTALAR, 'utf8');
+  const revisar = (s.split(/\nrevisar\(\)\{/)[1] || '').split(/\n\}\n/)[0];
+  assert.ok(revisar, 'no se encontró revisar()');
+  assert.match(revisar, /if ! semgrep_propio; then/);
+  assert.match(revisar, /informe FALLA "[^"\n]*no se pisa/);
+  assert.match(revisar, /"\$\{UAEH_SEMGREP_REEMPLAZAR:-0\}" = 1/);
+  assert.match(s, /^#   UAEH_SEMGREP_REEMPLAZAR=1 /m, 'la variable está en la cabecera');
+  assert.match(fs.readFileSync(path.join(RAIZ_REPO, 'tools', 'contenedor', 'verificar-instaladores.sh'), 'utf8'), /un semgrep que no instaló UAEH no se pisa/);
+});
+
 test('instalar.sh · reinstalar no sube paquetes sin pin: containerd.io va aparte y con --no-upgrade', () => {
   // Subir containerd.io reinicia el demonio de Docker y detiene los contenedores del usuario: una segunda corrida
   // del instalador (p. ej. tras subir el pin de semgrep) no puede hacerlo por su cuenta.
@@ -501,6 +514,30 @@ if (POSIX) {
       assert.equal(r.status, 0, r.stderr);
       assert.equal(r.stdout.trim(), String(n), nombre);
     }
+  });
+
+  test('instalar.sh · semgrep_propio: solo es de UAEH lo que falta o el enlace hacia /opt/pipx/venvs/semgrep/', (t) => {
+    // Lo demás (un binario suelto, un enlace a otro sitio) es de otra instalación y pipx --force lo pisaría sin avisar.
+    const d = path.join(E.dir, 'semgrep-propio');
+    fs.mkdirSync(d, { recursive: true });
+    const casos = [
+      ['falta', null, 0],
+      ['enlace-uaeh', '/opt/pipx/venvs/semgrep/bin/semgrep', 0],
+      ['enlace-otro', '/usr/bin/semgrep', 1],
+      ['enlace-prefijo-parecido', '/opt/pipx/venvs/semgrep-otro/bin/semgrep', 1],
+      ['enlace-relativo', '../venvs/semgrep/bin/semgrep', 1],
+      ['archivo', 'ARCHIVO', 1],
+    ];
+    for (const [nombre, destino] of casos) {
+      const f = path.join(d, nombre);
+      if (destino === 'ARCHIVO') fs.writeFileSync(f, '#!/bin/sh\necho 0.0.1\n', { mode: 0o755 });
+      else if (destino) fs.symlinkSync(destino, f);
+    }
+    const script = '. "$1"; shift; for f in "$@"; do if semgrep_propio "$f"; then echo "0 ${f##*/}"; else echo "1 ${f##*/}"; fi; done';
+    const r = bash(t, script, [barra(INSTALAR), ...casos.map(([n]) => barra(path.join(d, n)))]);
+    if (!r) return;
+    assert.equal(r.status, 0, r.stderr);
+    assert.deepEqual(r.stdout.trim().split('\n'), casos.map(([n, , c]) => `${c} ${n}`));
   });
 }
 

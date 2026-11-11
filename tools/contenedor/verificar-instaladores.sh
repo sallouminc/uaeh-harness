@@ -3,7 +3,7 @@
 # plugin uaeh-harness montado en /plugin (solo lectura). Lo lanza tools/probar-instaladores-contenedor.sh; no se corre
 # a mano en una máquina real (instala en /opt/uaeh).
 # Comprueba de verdad la capa 3 sin Docker dentro (UAEH_SOLO_ESCANERES=1): instalar.sh (pines, descargas verificadas,
-# reglas, instalado.json, idempotencia), instalar-bin.sh (uaeh.conf, permisos, validadores de vendor/security-audit,
+# reglas, instalado.json, idempotencia, un semgrep ajeno que no se pisa), instalar-bin.sh (uaeh.conf, permisos, validadores de vendor/security-audit,
 # rechazo de bases peligrosas), la
 # validación de rutas de uaeh-sandbox, uaeh.conf manipulado, salida 77 de las autopruebas sin Docker y el
 # probar-promover.sh completo y, al final, desinstalar.sh. Salida: PASS/FAIL por control y PROBAR_INSTALADORES_OK | PROBAR_INSTALADORES_FALLA <n>.
@@ -39,6 +39,18 @@ como "/usr/local/bin/semgrep --version" >/tmp/v.sg 2>&1 && ok "el usuario corre 
 paso "3. segunda corrida (idempotente)"
 corre env UAEH_SOLO_ESCANERES=1 bash "$W/instalar.sh"; espera "segunda corrida" 0 "se conservan las reglas vigentes"
 if grep -qE "^p/[a-z-]+: [0-9]+ reglas" /tmp/v.out; then no "la segunda corrida volvió a bajar reglas"; else ok "la segunda corrida no volvió a bajar reglas"; fi
+
+paso "3b. un semgrep que no instaló UAEH no se pisa (salvo con UAEH_SEMGREP_REEMPLAZAR=1)"
+enlace=$(readlink /usr/local/bin/semgrep)
+rm -f /usr/local/bin/semgrep && printf '#!/bin/sh\necho 0.0.1\n' > /usr/local/bin/semgrep && chmod 0755 /usr/local/bin/semgrep
+huella=$(sha256sum /usr/local/bin/semgrep | cut -c1-64)
+corre env UAEH_SOLO_ESCANERES=1 bash "$W/instalar.sh" --comprobar; espera "--comprobar señala el semgrep ajeno" 1 "no lo instaló UAEH (0.0.1): no se pisa"
+corre env UAEH_SOLO_ESCANERES=1 bash "$W/instalar.sh"; espera "instalar se detiene antes de empezar" 1 "no se instaló nada"
+if [ ! -L /usr/local/bin/semgrep ] && [ "$(sha256sum /usr/local/bin/semgrep | cut -c1-64)" = "$huella" ]; then ok "el semgrep ajeno queda intacto"
+else no "el semgrep ajeno cambió: $(ls -l /usr/local/bin/semgrep)"; fi
+corre env UAEH_SOLO_ESCANERES=1 UAEH_SEMGREP_REEMPLAZAR=1 bash "$W/instalar.sh"; espera "con UAEH_SEMGREP_REEMPLAZAR=1 lo reemplaza" 0 "INSTALAR_OK"
+grep -qF "se reemplazará por $(pin semgrep/version)" /tmp/v.out && ok "y lo avisa antes de empezar" || no "no avisó del reemplazo"
+[ "$(readlink /usr/local/bin/semgrep)" = "$enlace" ] && ok "el enlace vuelve a ser el de UAEH ($enlace)" || no "enlace de semgrep: $(readlink /usr/local/bin/semgrep || echo ninguno)"
 
 paso "4. escáneres, reglas y configuración de gitleaks contra los pines"
 [ "$(gitleaks version)" = "$(pin gitleaks/version)" ] && ok "gitleaks $(gitleaks version)" || no "gitleaks $(gitleaks version) ≠ pin"

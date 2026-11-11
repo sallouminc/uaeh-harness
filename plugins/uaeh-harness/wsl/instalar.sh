@@ -18,6 +18,7 @@
 #   UAEH_SKIP_DOCKER=1     no instala Docker Engine: usa el que ya responde (p. ej. el de un runner de CI)
 #   UAEH_SOLO_ESCANERES=1  solo gitleaks, osv-scanner, semgrep y sus reglas (sin Docker ni imágenes)
 #   UAEH_REGLAS_NUEVAS=1   vuelve a bajar las reglas de semgrep aunque ya haya unas vigentes y sanas
+#   UAEH_SEMGREP_REEMPLAZAR=1  reemplaza un /usr/local/bin/semgrep de otra versión que no instaló UAEH (sin ella, se detiene sin tocarlo)
 #   UAEH_TZ=<zona IANA>    zona del sello de instalación (por defecto, la del sistema)
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
@@ -154,6 +155,11 @@ FALLAS=0
 informe(){ printf '%-6s %s\n' "$1" "$2"; if [ "$1" = FALLA ]; then FALLAS=$((FALLAS + 1)); fi; }
 quiere_docker(){ [ "${UAEH_SOLO_ESCANERES:-0}" != 1 ]; }
 instala_docker(){ quiere_docker && [ "${UAEH_SKIP_DOCKER:-0}" != 1 ]; }
+semgrep_propio(){  # $1 (por defecto /usr/local/bin/semgrep) falta o es el enlace que deja pipx hacia el entorno de UAEH
+  local b="${1:-/usr/local/bin/semgrep}"
+  if [ ! -e "$b" ] && [ ! -L "$b" ]; then return 0; fi
+  [ -L "$b" ] && [[ "$(readlink "$b")" == /opt/pipx/venvs/semgrep/* ]]
+}
 
 revisar(){  # comprobaciones previas: mismas en --comprobar y al instalar (allí, cualquier FALLA detiene todo)
   local arq codename pid1
@@ -178,6 +184,13 @@ revisar(){  # comprobaciones previas: mismas en --comprobar y al instalar (allí
   elif getent passwd "$U" >/dev/null 2>&1; then informe OK "usuario $U"
   else informe FALLA "el usuario $U no existe en este Linux"; fi
   if [ -n "${UAEH_TZ-}" ] && [[ ! "$UAEH_TZ" =~ ^[A-Za-z0-9_+/-]{1,64}$ ]]; then informe FALLA "UAEH_TZ no válido: $UAEH_TZ"; fi
+  # Un semgrep que no puso UAEH no se pisa: pipx --force lo reemplazaría sin avisar.
+  if ! semgrep_propio; then
+    local sv; sv=$(/usr/local/bin/semgrep --version 2>/dev/null || true)
+    if [ "$sv" = "$PIN_SEMGREP_VER" ]; then informe OK "semgrep $sv ya presente en /usr/local/bin (no lo instaló UAEH; es la versión fijada y se usa tal cual)"
+    elif [ "${UAEH_SEMGREP_REEMPLAZAR:-0}" = 1 ]; then informe AVISO "/usr/local/bin/semgrep no lo instaló UAEH (${sv:-no responde}): se reemplazará por $PIN_SEMGREP_VER (UAEH_SEMGREP_REEMPLAZAR=1)"
+    else informe FALLA "/usr/local/bin/semgrep ya existe y no lo instaló UAEH (${sv:-no responde}): no se pisa. Quítalo o renómbralo, o repite con UAEH_SEMGREP_REEMPLAZAR=1 para reemplazarlo por $PIN_SEMGREP_VER"; fi
+  fi
   if quiere_docker; then
     if instala_docker; then informe OK "modo completo (Docker Engine $PIN_DOCKER_VER + escáneres + imágenes)"
     else informe OK "modo UAEH_SKIP_DOCKER=1 (usa el Docker que ya responde + escáneres + imágenes)"; fi
@@ -342,6 +355,7 @@ instalar(){
   paso "semgrep $PIN_SEMGREP_VER (pipx de root en /opt/pipx)"
   export PIPX_HOME=/opt/pipx PIPX_BIN_DIR=/usr/local/bin PIPX_MAN_DIR=/usr/local/share/man
   if [ "$(/usr/local/bin/semgrep --version 2>/dev/null || true)" != "$PIN_SEMGREP_VER" ]; then
+    # --force solo llega aquí si /usr/local/bin/semgrep falta, es el enlace de UAEH o se pidió UAEH_SEMGREP_REEMPLAZAR=1 (revisar()).
     pipx install --force "semgrep==$PIN_SEMGREP_VER" >/dev/null
   fi
   echo "semgrep $(/usr/local/bin/semgrep --version)"

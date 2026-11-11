@@ -46,7 +46,7 @@ Todo se instala como root bajo `/opt/uaeh`, fuera del alcance de los agentes. Lo
 | `instalar-bin.sh` | Copia los programas a `/opt/uaeh/{bin,contenedor,pruebas,validadores}` (incluida la caja de arena `uaeh-sandbox`) y escribe `/opt/uaeh/uaeh.conf` con la carpeta de corridas y el usuario |
 | `desinstalar.sh` | Lo inverso: en seco por defecto, y con `--aplicar` (como root) quita `/opt/uaeh` y los programas `uaeh-*` de `/usr/local/bin`. `--con-escaneres` y `--con-imagenes` suman los escáneres que instaló UAEH y las imágenes de la caja de arena. Nunca desinstala Docker Engine. Pasos en [desinstalar.md](desinstalar.md) |
 
-Variables de `instalar.sh`: `UAEH_USER`, `UAEH_SKIP_DOCKER=1` (usa el Docker que ya hay), `UAEH_SOLO_ESCANERES=1` (sin Docker ni imágenes), `UAEH_REGLAS_NUEVAS=1` y `UAEH_TZ`. La carpeta de corridas (`UAEH_BASE`) es una ruta absoluta de Linux con reglas estrictas, detalladas en el README de `wsl/`.
+Variables de `instalar.sh`: `UAEH_USER`, `UAEH_SKIP_DOCKER=1` (usa el Docker que ya hay), `UAEH_SOLO_ESCANERES=1` (sin Docker ni imágenes), `UAEH_REGLAS_NUEVAS=1`, `UAEH_SEMGREP_REEMPLAZAR=1` (reemplaza un `/usr/local/bin/semgrep` de otra versión que no instaló UAEH; sin ella, el instalador se detiene antes de empezar y no lo toca) y `UAEH_TZ`. La carpeta de corridas (`UAEH_BASE`) es una ruta absoluta de Linux con reglas estrictas, detalladas en el README de `wsl/`.
 
 Las autopruebas de `/opt/uaeh/pruebas/*.sh` terminan con 0 (verde), 1 (falla) o 77 (omitida: falta la capa 3, Docker o la red). El camino completo está en [seguridad.md](seguridad.md) y los pasos de instalación en [instalacion.md](instalacion.md).
 

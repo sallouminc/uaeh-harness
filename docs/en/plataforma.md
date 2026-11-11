@@ -46,7 +46,7 @@ Everything is installed as root under `/opt/uaeh`, out of reach of the agents. T
 | `instalar-bin.sh` | Copies the programs to `/opt/uaeh/{bin,contenedor,pruebas,validadores}` (including the `uaeh-sandbox` sandbox) and writes `/opt/uaeh/uaeh.conf` with the runs folder and the user |
 | `desinstalar.sh` | The inverse: a dry run by default, and with `--aplicar` (as root) it removes `/opt/uaeh` and the `uaeh-*` programs from `/usr/local/bin`. `--con-escaneres` and `--con-imagenes` add the scanners UAEH installed and the sandbox images. It never uninstalls Docker Engine. Steps in [desinstalar.md](desinstalar.md) |
 
-`instalar.sh` variables: `UAEH_USER`, `UAEH_SKIP_DOCKER=1` (uses the Docker already present), `UAEH_SOLO_ESCANERES=1` (no Docker or images), `UAEH_REGLAS_NUEVAS=1`, and `UAEH_TZ`. The runs folder (`UAEH_BASE`) is an absolute Linux path with strict rules, detailed in the README of `wsl/`.
+`instalar.sh` variables: `UAEH_USER`, `UAEH_SKIP_DOCKER=1` (uses the Docker already present), `UAEH_SOLO_ESCANERES=1` (no Docker or images), `UAEH_REGLAS_NUEVAS=1`, `UAEH_SEMGREP_REEMPLAZAR=1` (replaces a `/usr/local/bin/semgrep` of another version that UAEH did not install; without it, the installer stops before starting and leaves it alone), and `UAEH_TZ`. The runs folder (`UAEH_BASE`) is an absolute Linux path with strict rules, detailed in the README of `wsl/`.
 
 The self-tests in `/opt/uaeh/pruebas/*.sh` end with 0 (green), 1 (failure), or 77 (skipped: layer 3, Docker, or the network is missing). The full path is in [seguridad.md](seguridad.md) and the installation steps in [instalacion.md](instalacion.md).
 
