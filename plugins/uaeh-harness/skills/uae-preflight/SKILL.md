@@ -12,7 +12,7 @@ Entrada: $ARGUMENTS (sin ruta = directorio actual).
 
 **Cuándo entra:** antes de un lanzamiento a producción (la lista previa de `/uaeh-harness:uae-security lanzamiento` lo exige) o cuando el usuario la pide por su nombre. Nunca con la primera tarea de un proyecto, ni al vencer la vigencia, ni por la línea informativa que el plugin da al abrir la sesión. Corre en un contexto aparte: no ve la conversación que la llamó y le devuelve solo un resumen.
 
-**Plataformas:** Node ≥ 20 y git. Probado en Windows 11; en Linux y macOS no probado (no usa el motor de Linux).
+**Plataformas:** Node ≥ 20 y git (no usa el motor de Linux). La skill, probada en Windows 11; la huella, el sello y las plantillas de verificación se prueban en la CI de Windows y de Linux. macOS, sin probar.
 
 ## Prefijos (se definen una vez; el resto del documento los usa)
 - `<huella>` = `node "${CLAUDE_PLUGIN_ROOT}/scripts/uaeh-huella.cjs"` (huella de la superficie de riesgo y sello).

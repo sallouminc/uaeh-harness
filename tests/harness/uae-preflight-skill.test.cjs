@@ -95,7 +95,7 @@ test('uae-preflight: conserva el método (bajo pedido, solo docs/harness, delega
     assert.ok(SKILL.includes(frase), `falta «${frase}»`);
   }
   for (const doc of DOCUMENTOS) assert.ok(SKILL.includes(`\`${doc}\``), `SKILL.md no nombra ${doc}`);
-  assert.match(SKILL, /Probado en Windows 11; en Linux y macOS no probado/);
+  assert.match(SKILL, /La skill, probada en Windows 11; la huella, el sello y las plantillas de verificación se prueban en la CI de Windows y de Linux\. macOS, sin probar\./);
   // Nada de la máquina del autor: ni repos de clientes con nombre, ni carpetas de reportes en el escritorio.
   assert.ok(!/Escritorio|cyber-neo-report|security-audit-skill/i.test(SKILL));
 });

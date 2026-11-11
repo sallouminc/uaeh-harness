@@ -7,7 +7,7 @@ argument-hint: "[quick|standard|deep|diff <base>|incremental <categorías>|repro
 
 Corre en la conversación principal (orquesta subagentes). Responde al usuario en su idioma y en llano; los archivos `findings.json` y `coverage-ledger.json` van en inglés porque los validadores lo exigen.
 
-**Plataformas:** la caja de arena (capa 3) corre en Windows 11 con WSL2 (probado) y en Linux (objetivo, no probado). En macOS no está soportada: la confirmación queda `UNKNOWN`.
+**Plataformas:** la caja de arena (capa 3) corre en Windows 11 con WSL2 (probado) y en Linux Ubuntu 24.04 x86_64 (probado en la CI, de forma nativa). En macOS no está soportada: la confirmación queda `UNKNOWN`.
 
 **Las 4 garantías (no negociables):**
 1. **Independencia:** ningún auditor ve la conversación que construyó el código; solo el repo, el diff y la evidencia. Codex (otra familia) revisa **a ciegas**, sin ver los hallazgos de Claude.

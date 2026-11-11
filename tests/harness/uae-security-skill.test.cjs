@@ -92,7 +92,9 @@ test('uae-security: conserva las 4 garantías, los modos, los estados y las regl
   for (const estado of ['confirmado', 'por_validar', 'rechazado', 'corregido-verificado', 'aceptado']) assert.ok(escala.includes(`**${estado}**`), `escala-y-estados.md: falta ${estado}`);
   assert.match(SKILL, /macOS no está soportada/);
   assert.match(SKILL, /Windows 11 con WSL2 \(probado\)/);
-  assert.match(SKILL, /Linux \(objetivo, no probado\)/);
+  // Linux corre nativo en la CI desde la capa 3 (trabajos linux-integracion e instaladores-contenedor).
+  assert.match(SKILL, /Linux Ubuntu 24\.04 x86_64 \(probado en la CI, de forma nativa\)/);
+  assert.doesNotMatch(SKILL, /no probado/);
 });
 
 // ── Rutas del plugin ───────────────────────────────────────────────────────────────────
