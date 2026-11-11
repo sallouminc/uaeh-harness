@@ -525,7 +525,10 @@ function quitarStatusline(o) {
   if (lectura.estado === 'ausente' || lectura.estado === 'vacio') {
     acciones.push(accion('SIN CAMBIOS', destino, 'statusLine: no hay settings.json con contenido; nada que hacer'));
   } else if (lectura.estado === 'roto') {
-    acciones.push(accion('ERROR', destino, `no se pudo usar como JSON (${lectura.motivo}); no se tocó. Si tiene una "statusLine" del kit, quítala a mano`));
+    // Sin leer settings.json no se sabe si su statusLine apunta al espejo: borrar el espejo dejaría la barra
+    // apuntando a un archivo que ya no existe. No se toca nada.
+    acciones.push(accion('ERROR', destino, `no se pudo usar como JSON (${lectura.motivo}); no se tocó, y el espejo tampoco. Arréglalo (o quita a mano su "statusLine" del kit) y repite el comando`));
+    return acciones;
   } else {
     const actual = lectura.datos.statusLine;
     const comando = actual && typeof actual === 'object' ? actual.command : undefined;

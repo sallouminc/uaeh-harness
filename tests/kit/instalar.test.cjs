@@ -923,16 +923,22 @@ test('statusline --quitar con una barra ajena en settings: no se toca (aunque se
   assert.equal(fs.existsSync(path.join(e.uaehHome, 'estable', 'statusline')), false, 'el espejo sí se limpia');
 }));
 
-test('statusline --quitar con settings.json roto: ERROR código 1, no lo toca y aun así limpia el espejo', () => conCasa((e) => {
+test('statusline --quitar con settings.json roto: ERROR código 1 y no toca nada (ni settings ni el espejo)', () => conCasa((e) => {
   const p = pluginFalso(e, { origenes: ORIGENES_BARRA });
   instalar(e, ['statusline', '--aplicar'], p);
   const destino = path.join(e.claudeHome, 'settings.json');
+  const estable = path.join(e.uaehHome, 'estable');
   fs.writeFileSync(destino, '{ roto');
-  const r = instalar(e, ['statusline', '--quitar', '--aplicar'], p);
-  assert.equal(r.status, 1);
-  assert.match(r.stdout, /^ERROR +.*no se tocó/m);
-  assert.equal(leer(destino), '{ roto');
-  assert.equal(fs.existsSync(path.join(e.uaehHome, 'estable', 'VERSION')), false);
+  const antes = arbol(estable);
+  assert.ok(antes.includes('VERSION') && antes.length > 1, 'el espejo de la barra existe antes de quitar');
+  for (const args of [['statusline', '--quitar'], ['statusline', '--quitar', '--aplicar']]) {
+    const r = instalar(e, args, p);
+    assert.equal(r.status, 1, r.stdout);
+    assert.match(r.stdout, /^ERROR +.*no se tocó, y el espejo tampoco/m);
+    assert.doesNotMatch(r.stdout, /^(HECHO|HARÍA) /m, 'ni hace ni anuncia borrados');
+    assert.equal(leer(destino), '{ roto');
+    assert.deepEqual(arbol(estable), antes, `${args.join(' ')}: el espejo queda igual (la barra sigue apuntando a algo que existe)`);
+  }
 }));
 
 test('todo --quitar: deshace en orden inverso, un respaldo por archivo, ida y vuelta exacta e idempotente', () => conCasa((e) => {
