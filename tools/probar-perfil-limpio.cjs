@@ -194,7 +194,7 @@ function main(argv) {
     borrarCredenciales(); // último uso de `claude`: el doctor no las necesita
     const seg = ((Date.now() - inicio) / 1000).toFixed(1);
     if (r.error || r.status !== 0) {
-      paso('claude -p en perfil limpio', false, `estado ${r.status} (${seg} s): ${(r.stderr || r.stdout || String(r.error)).trim().slice(0, 600)}`);
+      paso('claude -p en perfil limpio', false, `estado ${r.status}${r.error ? `, ${r.error.code || r.error.message}` : ''} (${seg} s):${(r.stderr || r.stdout || String(r.error)).trim().slice(0, 600)}`);
     } else {
       let texto = r.stdout;
       try { const j = JSON.parse(r.stdout); texto = typeof j.result === 'string' ? j.result : JSON.stringify(j); informe.costo_usd = j.total_cost_usd; informe.session_id = j.session_id; } catch { /* texto plano */ }

@@ -39,10 +39,12 @@ function claudeFalso(e, { esperar = false } = {}) {
   fs.mkdirSync(bin, { recursive: true });
   if (POSIX) {
     // Solo `claude -p` espera: el doctor del kit también llama a `claude --version`.
-    const espera = esperar ? 'if [ "$1" = -p ]; then sleep 30; fi\n' : '';
-    fs.writeFileSync(path.join(bin, 'claude'), `#!/bin/sh\n${espera}echo '{"result":"SIN MARCA"}'\n`, { mode: 0o755 });
+    // Como el real, `claude -p` lee el prompt de su entrada: si terminara sin leerla, la herramienta recibiría a veces
+    // EPIPE al escribirla (medido en Linux con la máquina cargada: 89 de 1500 corridas) y la prueba fallaría sin motivo.
+    const enP = `cat >/dev/null${esperar ? '; sleep 30' : ''}`;
+    fs.writeFileSync(path.join(bin, 'claude'), `#!/bin/sh\nif [ "$1" = -p ]; then ${enP}; fi\necho '{"result":"SIN MARCA"}'\n`, { mode: 0o755 });
   } else {
-    fs.writeFileSync(path.join(bin, 'claude.cmd'), '@echo off\r\necho {"result":"SIN MARCA"}\r\n');
+    fs.writeFileSync(path.join(bin, 'claude.cmd'), '@echo off\r\nif "%~1"=="-p" findstr "^" >nul\r\necho {"result":"SIN MARCA"}\r\nexit /b 0\r\n');
   }
   const env = { ...e.env };
   const k = Object.keys(env).find((x) => x.toUpperCase() === 'PATH') || 'PATH';
