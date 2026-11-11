@@ -601,6 +601,10 @@ describe('sello de integridad UAEH (uaeh-integridad.cjs)', { concurrency: true }
       I('test-results/captura.png nuevo → INTACTO', () => m.escribir('test-results/captura.png', 'png'), 'test-results/captura.png'),
       I('sub/test-results/captura.png nuevo (cualquier profundidad) → INTACTO', () => m.escribir('sub/test-results/captura.png', 'png'), 'sub/test-results/captura.png'),
       R('test-results/__tests__/x.js nuevo → ROTA', () => m.escribir('test-results/__tests__/x.js', 'x'), 'test-results/__tests__/x.js'),
+      // Bajo .claude/ o .codex/ no hay «evidencia»: un .md nuevo ahí es una skill o un comando que se carga después.
+      R('.claude/skills/test-results/SKILL.md nuevo → ROTA', () => m.escribir('.claude/skills/test-results/SKILL.md', 'x\n'), '.claude/skills/test-results/SKILL.md'),
+      R('.claude/commands/playwright-report/x.md nuevo → ROTA', () => m.escribir('.claude/commands/playwright-report/x.md', 'x\n'), '.claude/commands/playwright-report/x.md'),
+      R('sub/.codex/test-results/x.md nuevo → ROTA', () => m.escribir('sub/.codex/test-results/x.md', 'x\n'), 'sub/.codex/test-results/x.md'),
     ]);
   });
 

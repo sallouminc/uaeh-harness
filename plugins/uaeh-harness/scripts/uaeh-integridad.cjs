@@ -19,7 +19,8 @@
 //    (cubre assume-unchanged, skip-worktree y filtros clean); el índice (ls-files -s) y las banderas (ls-files -v).
 //  - TODOS los no rastreados y no ignorados (salvo evidencia nueva de los revisores: archivos NO rastreados con
 //    extensión de evidencia bajo reports/visual-audit, test-results, playwright-report, blob-report o .playwright-cli,
-//    a cualquier profundidad y que no sean pruebas; los RASTREADOS en esas carpetas sí cuentan).
+//    a cualquier profundidad y que no sean pruebas; los RASTREADOS en esas carpetas sí cuentan; bajo .claude/ o
+//    .codex/ la excepción NO aplica: ahí todo archivo nuevo cuenta).
 //  - Ignorados que son ENTRADAS, a cualquier profundidad (ciclo 3, A3/A8): .env*, .npmrc y todo lo que cuelgue de una
 //    carpeta .claude/ o .codex/ (excluye node_modules/, .git/ y .claude/worktrees/), y además todo archivo ignorado
 //    que parezca código, configuración o credencial: por extensión (py js mjs cjs ts tsx jsx sh bash ps1 psm1 bat cmd
@@ -107,6 +108,19 @@
 //    de plugins/cache/…, no la poda ninguna regla (la poda de carpetas de salida solo afecta al recorrido de los
 //    IGNORADOS dentro del repo revisado).
 //  - Efectos fuera del repo (BD, push, red, servicios) no se miden.
+//  - Permisos aprobados: settings.local.json se mide SIN permissions.allow ni additionalDirectories (ver NORMALIZACIÓN).
+//    Un revisor que se apruebe un permiso amplio (p. ej. un comodín de Bash) lo deja para sesiones futuras con INTACTO.
+//  - La política del arnés fuera de estable/: <uaehHome>/uaeh.config.json, el interruptor guardia-cierre.apagada,
+//    excepciones.jsonl y sesiones/ no se miden (quien quiera medir la configuración la suma con UAEH_ARNES).
+//  - De <claudeHome> no se miden las skills que no empiezan por uae-, commands/, output-styles/ ni rules/; de las
+//    carpetas ancestro solo CLAUDE.md y AGENTS.md (no .claude/CLAUDE.md ni CLAUDE.local.md).
+//  - Las referencias de git no se miden (solo HEAD): `git replace` o una rama nueva no cambian el veredicto. Lo que
+//    oculte un .gitignore nuevo y no parezca código tampoco se mide (ver ignorados, arriba).
+//  - Nombres de archivo que no son UTF-8 válido (solo POSIX): git los entrega con U+FFFD y el archivo se mide como
+//    ausente antes y después: su cambio no se ve.
+//  - Carpeta de respaldo de fotos en os.tmpdir() (solo si la principal no admite escritura): en un equipo POSIX con
+//    varios usuarios es compartida; otro usuario puede borrar fotos (→ DESCONOCIDO) o plantar ahí un enlace.
+//  - Un proceso en segundo plano (servidor de desarrollo, watcher) puede escribir después de `comparar`.
 //  - Las fotos de los hooks (agente-<id>) no llevan huella (el id lo pone Claude Code): los hooks son AVISO; manda el
 //    comando del orquestador (foto/comparar con id con huella).
 //  - Enlaces simbólicos a carpetas: solo se mide el destino textual (`enlace-dir:`), no su contenido.
@@ -182,6 +196,7 @@ const NOMBRES_CODIGO = new Set(['claude.md', 'agents.md', 'google-services.json'
 const CARPETA_EVIDENCIA = /(?:^|\/)(?:reports\/visual-audit|test-results|playwright-report|blob-report|\.playwright-cli)\//i;
 const EXT_EVIDENCIA = /\.(?:png|jpe?g|webp|gif|svg|webm|mp4|zip|json|ya?ml|md|html|txt|log|xml|css|js|map|woff2?|ttf|trace|network|ndjson|pdf)$/i; // A25: + salidas de traza de Playwright
 const NOMBRE_PRUEBA = /\.(?:test|spec)\.|(?:^|\/)__tests__\//i;
+const CONFIG_DE_AGENTE = /(?:^|\/)\.(?:claude|codex)\//i;
 
 // ---------------------------------------------------------------- utilidades
 
@@ -701,6 +716,9 @@ function partirIndice(salida) {
 }
 
 function esEvidenciaNueva(rel) {
+  // Bajo .claude/ o .codex/ nada es evidencia: ahí un .md nuevo es una skill, un comando o una regla que el agente
+  // carga en la sesión siguiente (p. ej. .claude/skills/test-results/SKILL.md).
+  if (CONFIG_DE_AGENTE.test(rel)) return false;
   return CARPETA_EVIDENCIA.test(rel) && EXT_EVIDENCIA.test(rel) && !NOMBRE_PRUEBA.test(rel);
 }
 
