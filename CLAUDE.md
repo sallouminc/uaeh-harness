@@ -8,6 +8,14 @@ Marketplace `uaeh` con dos plugins de Claude Code: `plugins/uaeh-kit` (capa 1: m
 eficiencia de tokens; solo informa) y `plugins/uaeh-harness` (capas 2 y 3: arnés de verificación y
 puertas; hooks que bloquean). Diseño y hoja de ruta: `README.md`, `CHANGELOG.md`.
 
+## Preparación local de identidad (13-nov-2026; sin publicar)
+- Versiones preparadas: kit 1.0.2 y arnés 1.0.3; `CHANGELOG.md` las conserva en `Unreleased`.
+- Ambos manifiestos usan `icon: ./assets/icon.png` (512 px, copias idénticas).
+- Marca: `assets/brand/`, guía PDF y `docs/es/marca.md` / `docs/en/marca.md`.
+- Descriptor único: Universal Agentic Engineering Harness. Sin eslogan.
+- Comprobación del paquete visual: `node tools/verificar-marca.cjs` (10 controles).
+- No se han creado tags, publicado cambios ni actualizado instalaciones con esta preparación.
+
 ## Convenciones (se verifican en CI)
 - **Node ≥ 20, sin dependencias.** Scripts `.cjs`/`.js` con `'use strict'`, LF, UTF-8 sin BOM.
 - **Rutas de estado solo desde `scripts/lib/comun.cjs`:** `claudeHome()`, `uaehHome()`, `estableDir()`.

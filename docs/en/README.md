@@ -6,6 +6,8 @@ UAEH is a working method for programming with AI agents, packaged as two Claude 
 
 [Español](../es/README.md)
 
+Visual identity: [brand guide](marca.md).
+
 ## If looking for X, go to page Y
 
 | If looking for… | Page |

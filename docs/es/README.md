@@ -6,6 +6,8 @@ UAEH es un método de trabajo para programar con agentes de IA, empaquetado como
 
 [English](../en/README.md)
 
+Identidad visual: [guía de marca](marca.md).
+
 ## Si se busca X, ir a la página Y
 
 | Si se busca… | Página |

@@ -1,5 +1,9 @@
 # UAEH — Universal Agentic Engineering Harness
 
+<img src="assets/brand/uaeh-icon-128.png" alt="UAEH" width="96" height="96">
+
+[Guía de marca](docs/es/marca.md)
+
 **[Read in English → README.md](README.md)**
 
 > **Estado: versión 1.0 publicada.** Las tres capas están construidas y su autor las usa a diario. Los cambios de cada versión están en [`CHANGELOG.md`](CHANGELOG.md). Este documento describe lo que contiene el repositorio y la evidencia que lo respalda; la documentación completa está en [`docs/es/`](docs/es/README.md).

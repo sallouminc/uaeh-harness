@@ -167,6 +167,9 @@ K/skills/uae-preflight/referencias/legal.md -> plugins/uaeh-harness/skills/uae-p
 K/skills/uae-preflight/referencias/seguridad.md -> plugins/uaeh-harness/skills/uae-preflight/referencias/seguridad.md
 
 [nuevos]
+# Icono creado para UAEH; mismo PNG de 512 px en ambos paquetes.
+plugins/uaeh-kit/assets/icon.png
+plugins/uaeh-harness/assets/icon.png
 
 # Capa 1 (uaeh-kit) · escritos para este repositorio
 plugins/uaeh-kit/.claude-plugin/plugin.json
@@ -228,7 +231,9 @@ plugins/uaeh-harness/wsl/estado.sh
 plugins/uaeh-harness/wsl/desinstalar.sh
 
 [grandes-permitidos]
-# Ninguno todavía: ningún archivo del repo pasa de 200 KB.
+# Recursos originales de identidad: maestro raster y guía visual con fuentes incrustadas.
+assets/brand/uaeh-icon-master.png
+assets/brand/UAEH-brand-guide.pdf
 
 [terceros]
 # cyber-neo (MIT, github.com/Hainrixz/cyber-neo): los 2 scripts de escaneo y 14 referencias, con el parche 0001.

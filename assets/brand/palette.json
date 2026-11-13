@@ -1,0 +1,16 @@
+{
+  "name": "UAEH",
+  "fullName": "Universal Agentic Engineering Harness",
+  "slogan": null,
+  "colors": {
+    "charcoal": "#20211F",
+    "ivory": "#ECE6D6",
+    "lime": "#B7EB42",
+    "gray": "#A7AAA2"
+  },
+  "fonts": {
+    "headings": "Bahnschrift",
+    "body": "Segoe UI",
+    "technical": "Consolas"
+  }
+}
