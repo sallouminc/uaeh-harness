@@ -159,6 +159,59 @@ test('el repo real está limpio', () => {
   assert.equal(r.status, 0, r.stdout);
 });
 
+test('la lista privada se lee una vez por corrida, no por línea ni por archivo', (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'uaeh-lint-lecturas-'));
+  const variableAnterior = process.env.UAEH_LINT_PRIVADO;
+  delete process.env.UAEH_LINT_PRIVADO;
+  lintMod.fijarPrivados(null);
+  t.after(() => {
+    if (variableAnterior === undefined) delete process.env.UAEH_LINT_PRIVADO;
+    else process.env.UAEH_LINT_PRIVADO = variableAnterior;
+    lintMod.fijarPrivados(PRIVADA_FICTICIA);
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+  const archivoPrivado = path.join(RAIZ, 'tools', 'lista-negra.local.txt');
+  const leer = fs.readFileSync;
+  let lecturas = 0;
+  t.mock.method(fs, 'readFileSync', function (p, ...args) {
+    if (String(p) === archivoPrivado) { lecturas++; return 'ClienteFicticio'; }
+    return leer.call(this, p, ...args);
+  });
+  const rutas = ['uno.txt', 'dos.txt'].map(n => path.join(dir, n));
+  for (const ruta of rutas) fs.writeFileSync(ruta, 'línea limpia\n'.repeat(1200) + "'Cliente' + 'Ficticio'\nCLIENTEFICTICIO\n");
+  const resultado = lint({ rutas });
+  assert.equal(lecturas, 1, 'una única lectura para toda la corrida');
+  assert.equal(resultado.privados.patrones, 1);
+  assert.equal(resultado.hallazgos.length, 4, 'se mantiene la detección unida e insensible a mayúsculas en ambos archivos');
+  assert.deepEqual(resultado.hallazgos.map(h => h.linea), [1201, 1202, 1201, 1202]);
+});
+
+test('una nueva corrida y revisarArchivo directo vuelven a leer la lista privada actualizada', (t) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'uaeh-lint-refresco-'));
+  const variableAnterior = process.env.UAEH_LINT_PRIVADO;
+  delete process.env.UAEH_LINT_PRIVADO;
+  lintMod.fijarPrivados(null);
+  t.after(() => {
+    if (variableAnterior === undefined) delete process.env.UAEH_LINT_PRIVADO;
+    else process.env.UAEH_LINT_PRIVADO = variableAnterior;
+    lintMod.fijarPrivados(PRIVADA_FICTICIA);
+    fs.rmSync(dir, { recursive: true, force: true });
+  });
+  const archivoPrivado = path.join(RAIZ, 'tools', 'lista-negra.local.txt');
+  const leer = fs.readFileSync;
+  let contenido = 'ClienteInicial';
+  t.mock.method(fs, 'readFileSync', function (p, ...args) {
+    return String(p) === archivoPrivado ? contenido : leer.call(this, p, ...args);
+  });
+  const archivo = path.join(dir, 'ejemplo.txt');
+  fs.writeFileSync(archivo, 'ClienteInicial\nClientePosterior\n');
+  assert.deepEqual(lint({ rutas: [archivo] }).hallazgos.map(h => h.texto), ['ClienteInicial']);
+  contenido = 'ClientePosterior';
+  assert.deepEqual(lint({ rutas: [archivo] }).hallazgos.map(h => h.texto), ['ClientePosterior']);
+  contenido = 'ClienteInicial\nClientePosterior';
+  assert.equal(revisarArchivo(archivo).length, 2, 'la API directa tampoco conserva una lista obsoleta');
+});
+
 test('lista privada: sale de la variable o del archivo local, nunca del repo; sin ella el lint lo dice y sigue', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'uaeh-lint-priv-'));
   try {

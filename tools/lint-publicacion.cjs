@@ -163,7 +163,7 @@ function exentosDeTerceros(raiz = RAIZ, carpetas = null) {
   return terceros;
 }
 
-function revisarArchivo(rel, terceros = null) {
+function revisarArchivo(rel, terceros = null, privados = null) {
   const hallazgos = [];
   // resolve, no join: una ruta explícita de otra unidad (p. ej. el temporal en C: con el repo en D:) llega absoluta.
   const abs = path.resolve(RAIZ, rel);
@@ -174,13 +174,16 @@ function revisarArchivo(rel, terceros = null) {
   if (esBinario(rel, buf)) return hallazgos;
   const texto = buf.toString('utf8');
   const delAutor = esDelAutor(rel);
+  // Una instantánea por corrida (o por llamada directa), nunca una lectura por cada línea.
+  // No se cachea entre corridas: los cambios de la política se recogen al volver a invocar el lint.
+  const listaPrivada = privados || cargarPrivados();
   const lineas = texto.split('\n');
   for (let i = 0; i < lineas.length; i++) {
     let l = lineas[i];
     // La lista privada no admite excepciones por línea, y se busca también con los literales unidos: un nombre
     // armado por partes ('ab' + 'cd') se lee a simple vista igual que escrito entero.
     const unida = l.replace(/['"`]\s*\+\s*['"`]/g, '');
-    for (const p of cargarPrivados().patrones) {
+    for (const p of listaPrivada.patrones) {
       const re = new RegExp(p.source, p.flags.includes('i') ? p.flags : p.flags + 'i');
       const m = re.exec(l) || re.exec(unida);
       if (m) hallazgos.push({ archivo: rel, linea: i + 1, patron: '(lista privada)', texto: m[0], contexto: l.trim().slice(0, 120) });
@@ -218,12 +221,12 @@ function lint(opciones = {}) {
   // opciones.exentos: lo de exentosDeTerceros() calculado por quien llama (verificar-publicacion, con su raíz).
   const exentos = opciones.exentos || exentosDeTerceros();
   const hallazgos = [];
+  const privados = cargarPrivados();
   let terceros = 0;
   for (const rel of archivos) {
     if (exentos.archivos.has(claveRuta(path.resolve(RAIZ, rel)))) terceros++;
-    hallazgos.push(...revisarArchivo(rel, exentos));
+    hallazgos.push(...revisarArchivo(rel, exentos, privados));
   }
-  const privados = cargarPrivados();
   return { archivos: archivos.length, terceros, hallazgos, privados: { patrones: privados.patrones.length, origen: privados.origen, avisos: privados.avisos } };
 }
 

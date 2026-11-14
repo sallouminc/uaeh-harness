@@ -8,6 +8,11 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y e
 
 ## [1.0.3] - 2026-11-14
 
+### Fixed / Corregido
+
+- Publication lint reads the private pattern list once per invocation instead of once per source line. This prevents timeouts on shared filesystems while keeping every pattern and detection rule. A new invocation reloads the current list. Regression coverage checks the read count, joined literals, case-insensitive matches and refreshed configuration; test time limits are unchanged.\
+  El lint de publicación lee la lista privada una vez por invocación en lugar de una vez por línea. Evita tiempos agotados en sistemas de archivos compartidos sin quitar patrones ni reglas de detección. Cada nueva invocación vuelve a cargar la lista actual. Las regresiones comprueban el número de lecturas, literales unidos, coincidencias sin distinguir mayúsculas y recarga de configuración; los límites de tiempo de las pruebas no cambian.
+
 ### Added / Añadido
 
 - Shared UAEH icon in both plugin manifests; versions: `uaeh-kit` 1.0.2 and `uaeh-harness` 1.0.3.\
