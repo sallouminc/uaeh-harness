@@ -45,4 +45,4 @@ Los dos plugins comparten el mismo icono; se distinguen por su nombre. En fondos
 - [Icono 512 px](../../assets/brand/uaeh-icon-512.png) · [256 px](../../assets/brand/uaeh-icon-256.png) · [128 px](../../assets/brand/uaeh-icon-128.png) · [64 px](../../assets/brand/uaeh-icon-64.png) · [32 px](../../assets/brand/uaeh-icon-32.png)
 - [Paleta y tipografía](../../assets/brand/palette.json)
 
-Generados a partir del concepto aprobado y exportados sin cambiar su geometría. La preparación local de estos recursos no publica ni instala una versión.
+Generados a partir del concepto aprobado y exportados sin cambiar su geometría. Cada plugin incluye su icono dentro del paquete; la guía y las exportaciones están disponibles en este repositorio.

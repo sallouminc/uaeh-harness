@@ -6,12 +6,12 @@ Todos los cambios notables de este proyecto se documentan en este archivo.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).\
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y este proyecto se rige por el [Versionado Semántico](https://semver.org/lang/es/).
 
-## [Unreleased]
+## [1.0.3] - 2026-11-14
 
 ### Added / Añadido
 
-- Shared UAEH icon in both plugin manifests; prepared versions: `uaeh-kit` 1.0.2 and `uaeh-harness` 1.0.3. Local preparation only, not released.\
-  Icono compartido UAEH en los manifiestos de ambos plugins; versiones preparadas: `uaeh-kit` 1.0.2 y `uaeh-harness` 1.0.3. Preparación local, sin publicar.
+- Shared UAEH icon in both plugin manifests; versions: `uaeh-kit` 1.0.2 and `uaeh-harness` 1.0.3.\
+  Icono compartido UAEH en los manifiestos de ambos plugins; versiones: `uaeh-kit` 1.0.2 y `uaeh-harness` 1.0.3.
 - Brand assets, visual guide in Spanish, and usage documentation in Spanish and English. The identity uses the full name Universal Agentic Engineering Harness, without a slogan.\
   Recursos de marca, guía visual en español y documentación de uso en español e inglés. La identidad usa el nombre completo Universal Agentic Engineering Harness, sin eslogan.
 

@@ -45,4 +45,4 @@ Both plugins share an icon and are distinguished by name. Keep the charcoal tile
 - [512 px icon](../../assets/brand/uaeh-icon-512.png) · [256 px](../../assets/brand/uaeh-icon-256.png) · [128 px](../../assets/brand/uaeh-icon-128.png) · [64 px](../../assets/brand/uaeh-icon-64.png) · [32 px](../../assets/brand/uaeh-icon-32.png)
 - [Palette and typography](../../assets/brand/palette.json)
 
-Generated from the approved concept and exported without changing its geometry. Local preparation of these assets does not publish or install a release.
+Generated from the approved concept and exported without changing its geometry. Each plugin includes its icon in the package; the guide and exports are available in this repository.
